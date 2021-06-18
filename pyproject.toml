@@ -6,6 +6,12 @@ authors = ["valien <valien.r@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+redis = "^3.5.3"
+psycopg2 = "^2.9.1"
+aiogram = "^2.13"
+requests = "^2.25.1"
+flake8 = "^3.9.2"
+black = "^21.6b0"
 
 [tool.poetry.dev-dependencies]
 
