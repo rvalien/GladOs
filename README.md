@@ -56,3 +56,6 @@ Weather for my hometown.
 `/weather` - example:  21.4C, ясно
 
 ---
+
+### /myid  
+debug help command

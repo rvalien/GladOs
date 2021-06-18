@@ -24,14 +24,13 @@ def get_ststel_data(login: str, password: str) -> dict:
     :param password:
     :return:
     """
-    url = "http://ststel.ru/lk/submit.php"
+    url = "https://ststel.ru/lk/submit.php"
     header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0"}
     payload = {"phone": str(login), "pass": str(password)}
     a, b, i = 0, 0, 0
     with requests.Session() as s:
         # we need while because ststel returns zeroes some times
         while a == 0 and b == 0:
-            print(i)
             r = s.post(url, data=payload, headers=header)
             if r.status_code != 200:
                 return {"error": f"ошибка авторизации {r.status_code} {r.text}"}
@@ -101,7 +100,6 @@ def free_time(message, redis_client) -> str:
 
         else:
             data_to_add = param[-1].casefold().split(", ")
-            print(data_to_add, len(data_to_add))
 
             add_result = redis_client.sadd(user_id, *data_to_add)
             if add_result == 1:

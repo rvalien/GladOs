@@ -26,11 +26,9 @@ CLIENT = redis.from_url(redis_url)
 
 chat_ids = []
 cursor.execute("select chat_id from users")
-print("update users")
 for item in cursor.fetchall():
     chat_ids.append(item[0])
-print(chat_ids)
-print("-" * 30)
+print("chat ids fom db:", chat_ids)
 conn.close()
 
 markup = types.ReplyKeyboardMarkup()
