@@ -31,7 +31,7 @@ CREATE TABLE public.chat_ids (
 ```
 
 ## bot's commands: 
----
+
 ### /time  
 can help you to choose what to do in your free time.  
 #### Usage:
@@ -40,22 +40,22 @@ can help you to choose what to do in your free time.
 `/time reading, sleep, bath` - add multiple elements to your todo list.  
 `/time all` - show all your opportunities in list.  
 `/time clean` - cleanup your list.
----
+
+
 ### /bill  
 I don't think that you are need it. It's specified for small virtual operator.
 
----
+
 ### /internet  
 I don't think that you are need it. It's specified for small virtual operator.
 
----
+
 ### /weather  
 Weather for my hometown.
 #### Usage:
 
 `/weather` - example:  21.4C, ясно
 
----
 
 ### /myid  
 debug help command
