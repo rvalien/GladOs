@@ -20,5 +20,3 @@ set environment variables
 `DELAY`  
 
 use app.json for deploy
-
-{% codeblock lang:markdown %} [Deploy my app to Heroku] (https://heroku.com/deploy?template=https://github.com/heroku/python-sample) {% endcodeblock %}
