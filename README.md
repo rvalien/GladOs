@@ -7,7 +7,7 @@
 
 
 [heroku needs requirements.txt to build the app](https://devcenter.heroku.com/articles/getting-started-with-python#declare-app-dependencies)
-so make ti with the command below if you use poetry
+so make it with the command below if you use poetry
 ```shell
 poetry export -f requirements.txt --output requirements.txt --without-hashes
 ```
@@ -35,23 +35,23 @@ CREATE TABLE public.chat_ids (
 ### /time  
 can help you to choose what to do in your free time.  
 #### Usage:
-`/time` - fetch random element from your todo list if list not empty.  
+`/time` - fetch random element from your todo list if list is not empty.  
 `/time game1` - add 1 element to your todo list.  
 `/time reading, sleep, bath` - add multiple elements to your todo list.  
 `/time all` - show all your opportunities in list.  
-`/time clean` - cleanup your list.
+`/time clean` - clean up your list.
 
 
 ### /bill  
-I don't think that you are need it. It's specified for small virtual operator.
+I don't think that you need it. It's specified for small virtual operator.
 
 
 ### /internet  
-I don't think that you are need it. It's specified for small virtual operator.
+I don't think that you need it. It's specified for small virtual operator.
 
 
 ### /weather  
-Weather for my hometown.
+Weather in my hometown.
 #### Usage:
 
 `/weather` - example:  21.4C, ясно
