@@ -1,5 +1,5 @@
 {
-  "name": "orbbot",
+  "name": "Glad0s",
   "description": "telegram bot helper (weather, phone bill, what to do).",
   "repository": "https://github.com/rvalien/GladOs",
   "addons": ["heroku-postgresql:hobby-dev", "redistogo:nano"],

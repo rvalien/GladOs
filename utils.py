@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import random
 import requests
 
 
@@ -35,7 +34,7 @@ def get_ststel_data(login: str, password: str) -> dict:
             print(i)
             r = s.post(url, data=payload, headers=header)
             if r.status_code != 200:
-                return f"ошибка авторизации {r.status_code} {r.text}"
+                return {"error": f"ошибка авторизации {r.status_code} {r.text}"}
             else:
                 foo = r.json()["customers"]
                 if len(foo) != 1:
@@ -78,31 +77,34 @@ def print_ststel_info(data: dict) -> str:
 
 def free_time(message, redis_client) -> str:
     """
+    commands (all, clean)
     :return: short string
     """
-    # TODO прототип для изучения редис. Переписать на использование списков
-    keyword = "exp2"
-    opportunities = ["книга", "покер", "шахматная доска", "ванна", "сон", "дуэлька"]
 
-    if redis_client.get(keyword) is None:
-        redis_client.set(keyword, ", ".join(opportunities))
-
-    base = redis_client.get(keyword)
+    user_id = message.from_user.id
     param = message.text.split("/time ")
 
     if param == ["/time"]:
-        opportunity = random.choice(base.decode().split(", "))
-
-        return f"Тебя ждёт {opportunity}"
-
+        random_element_from_set = redis_client.srandmember(user_id)
+        if random_element_from_set:
+            return random_element_from_set.decode()
+        else:
+            return "nothing in your list"
     else:
         if param[-1] == "all":
-            return f"Весь список:\n{redis_client.get(keyword).decode()}"
+            set_elements = redis_client.smembers(user_id)
+            return f"all list:\n {', '.join(map(bytes.decode, set_elements))}"
 
-        elif len(param[-1]) > 0:
-            base = ", ".join([base.decode(), param[-1]])
-            redis_client.set(keyword, base)
+        elif param[-1] == "clean":
+            redis_client.delete(user_id)
+            return "clean done"
 
-            return f"{param[-1]} добавлено в список."
         else:
-            return "ничего не понял."
+            data_to_add = param[-1].casefold().split(", ")
+            print(data_to_add, len(data_to_add))
+
+            add_result = redis_client.sadd(user_id, *data_to_add)
+            if add_result == 1:
+                return "add some."
+            else:
+                return f"{data_to_add} already in your list."

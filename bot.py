@@ -52,7 +52,7 @@ async def worker(message):
     await message.reply(get_weather(weather_token))
 
 
-@dp.message_handler(commands="time")
+@dp.message_handler(commands=["time"])
 async def worker(message):
     await types.ChatActions.typing(1)
     await message.reply(free_time(message, CLIENT))
@@ -92,7 +92,7 @@ async def worker(message):
     await message.reply(prepare_response_text(get_all_mobile_bills(res)))
 
 
-@dp.message_handler(regexp="myid")
+@dp.message_handler(commands=["myid"])
 async def worker(message):
     await types.ChatActions.typing(2)
     await message.reply(message.from_user)
@@ -105,6 +105,5 @@ def repeat(coro, loop):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    # loop.call_later(delay, repeat, auto_yt_check, loop)
-    # loop.call_later(delay, repeat, count_db_rows, loop)
+    # loop.call_later(delay, repeat, some_task, loop)
     asyncio.run(executor.start_polling(dp, loop=loop))

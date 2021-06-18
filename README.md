@@ -19,4 +19,40 @@ set environment variables
 `REDISTOGO_URL`  
 `DELAY`  
 
-use app.json for deploy
+use [.app.json](app.json) for deploy on [heroku](https://devcenter.heroku.com/articles/app-json-schema)
+
+create table
+```sql
+/* postgres */
+CREATE TABLE public.chat_ids (
+	chat_id int4 NULL,
+	"name" varchar NULL
+);
+```
+
+## bot's commands: 
+---
+### /time  
+can help you to choose what to do in your free time.  
+#### Usage:
+`/time` - fetch random element from your todo list if list not empty.  
+`/time game1` - add 1 element to your todo list.  
+`/time reading, sleep, bath` - add multiple elements to your todo list.  
+`/time all` - show all your opportunities in list.  
+`/time clean` - cleanup your list.
+---
+### /bill  
+I don't think that you are need it. It's specified for small virtual operator.
+
+---
+### /internet  
+I don't think that you are need it. It's specified for small virtual operator.
+
+---
+### /weather  
+Weather for my hometown.
+#### Usage:
+
+`/weather` - example:  21.4C, ясно
+
+---
