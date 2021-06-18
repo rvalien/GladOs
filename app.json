@@ -1,0 +1,33 @@
+{
+  "name": "orbbot",
+  "description": "telegram bot helper (weather, phone bill, what to do).",
+  "repository": "https://github.com/rvalien/GladOs",
+  "addons": ["heroku-postgresql:hobby-dev", "redistogo:nano"],
+
+  "env": {
+    "TELEGRAM_TOKEN": {
+      "description": "Your bot's token.",
+      "required": true
+    },
+    "WEATHER_TOKEN": {
+      "description": "token to openweathermap.org",
+      "required": true
+    },
+    "DATABASE_URL": {
+      "description": "postgres connection url",
+      "required": true
+    },
+    "REDISTOGO_URL": {
+      "description": "redis connection url",
+      "required": true
+    },
+    "DELAY": {
+      "description": "delay in seconds for periodic tasks",
+      "required": true
+    }
+  },
+  "keywords": [
+    "telegram-bot",
+    "weather"
+  ]
+}
