@@ -10,8 +10,8 @@
       "required": true
     },
     "WEATHER_TOKEN": {
-      "description": "token to openweathermap.org",
-      "required": true
+      "description": "token to openweathermap.org If you wanna use weather option",
+      "required": false
     },
     "DATABASE_URL": {
       "description": "postgres connection url",

@@ -5,32 +5,12 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rvalien/orbbot/master/LICENSE)
 [![Discord.py-Version](https://img.shields.io/badge/aiogram-2.13-blue)](https://pypi.org/project/discord.py/) 
 
+### description
 
-[heroku needs requirements.txt to build the app](https://devcenter.heroku.com/articles/getting-started-with-python#declare-app-dependencies)
-so make it with the command below if you use poetry
-```shell
-poetry export -f requirements.txt --output requirements.txt --without-hashes
-```
+Create for experiments. Now it helps me with routine.
+---
 
-set environment variables  
-`TELEGRAM_TOKEN`  
-`WEATHER_TOKEN`  
-`DATABASE_URL`  
-`REDISTOGO_URL`  
-`DELAY`  
-
-use [.app.json](app.json) for deploy on [heroku](https://devcenter.heroku.com/articles/app-json-schema)
-
-create table
-```sql
-/* postgres */
-CREATE TABLE public.chat_ids (
-	chat_id int4 NULL,
-	"name" varchar NULL
-);
-```
-
-## bot's commands: 
+### bot's commands: 
 
 ### /time  
 can help you to choose what to do in your free time.  
@@ -60,6 +40,37 @@ Weather in my hometown.
 ### /myid  
 debug help command
 
+---
+
+### setup
+
+[heroku needs requirements.txt to build the app](https://devcenter.heroku.com/articles/getting-started-with-python#declare-app-dependencies)
+so make it with the command below if you use poetry
+```shell
+poetry export -f requirements.txt --output requirements.txt --without-hashes
+```
+
+set environment variables  
+`TELEGRAM_TOKEN`  
+`WEATHER_TOKEN`  
+`DATABASE_URL`  
+`REDISTOGO_URL`  
+`DELAY`  
+
+create table
+```sql
+/* postgres */
+CREATE TABLE public.chat_ids (
+	chat_id int4 NULL,
+	"name" varchar NULL
+);
+```
+---
+
+### deploy
+
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/rvalien/GladOs)
+
 
 ---
 ### todo
@@ -69,3 +80,5 @@ move from redis to aioredis
 move from psycopg2 to asyncpg  
 
 refactor time button  
+
+Wanna new features? [Create an issue](https://github.com/rvalien/GladOs/issues) on this repo.
