@@ -24,7 +24,7 @@ def get_ststel_data(login: str, password: str) -> dict:
     :param password:
     :return:
     """
-    url = "https://ststel.ru/lk/submit.php"
+    url = "http://ststel.ru/lk/submit.php"
     header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0"}
     payload = {"phone": str(login), "pass": str(password)}
     a, b, i = 0, 0, 0

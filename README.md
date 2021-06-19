@@ -59,3 +59,11 @@ Weather in my hometown.
 
 ### /myid  
 debug help command
+
+
+---
+### todo
+refactor connections:
+use connection pool for postgres
+move from redis to aioredis
+move from psycopg2 to asyncpg
