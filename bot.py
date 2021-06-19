@@ -9,9 +9,10 @@ from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils import executor
-from psycopg2 import pool
+from aiogram.dispatcher.filters import Text
 from utils import get_weather, get_ststel_data, print_ststel_info, free_time
 
+logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +35,11 @@ chat_ids = []
 cursor.execute("select chat_id from users")
 for item in cursor.fetchall():
     chat_ids.append(item[0])
-logger.info("chat ids fom db:", chat_ids)
+logger.info(chat_ids)
 
 markup = ReplyKeyboardMarkup()
-markup.row(KeyboardButton("/weather", callback_data="weather_worker"), KeyboardButton("/time"))
-markup.row(KeyboardButton("/internet"), KeyboardButton("/bill"))
+markup.row(KeyboardButton("weather"), KeyboardButton("/time"))
+markup.row(KeyboardButton("internet"), KeyboardButton("bill"))
 
 
 @dp.message_handler(commands=["start"])
@@ -49,7 +50,7 @@ async def send_welcome(message: types.Message):
     )
 
 
-@dp.message_handler(commands=["weather"])
+@dp.message_handler(Text(equals="weather"))
 async def weather_worker(message):
     await types.ChatActions.typing(1)
     await message.reply(get_weather(weather_token))
@@ -61,7 +62,7 @@ async def free_time_worker(message):
     await message.reply(free_time(message, CLIENT))
 
 
-@dp.message_handler(commands=["internet"])
+@dp.message_handler(Text(equals="internet"))
 async def internet_left_worker(message):
     await types.ChatActions.typing(2)
     conn = psycopg2.connect(database)
@@ -71,7 +72,7 @@ async def internet_left_worker(message):
     await message.reply(str(print_ststel_info(get_ststel_data(*res))))
 
 
-@dp.message_handler(commands=["bill"])
+@dp.message_handler(Text(equals="bill"))
 async def get_bill_worker(message):
     await types.ChatActions.typing(2)
     conn = psycopg2.connect(database)
