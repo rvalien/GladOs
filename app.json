@@ -2,8 +2,10 @@
   "name": "Glad0s",
   "description": "telegram bot helper (weather, phone bill, what to do).",
   "repository": "https://github.com/rvalien/GladOs",
-  "addons": ["heroku-postgresql:hobby-dev", "redistogo:nano"],
-
+  "addons": [
+    "heroku-postgresql:hobby-dev",
+    "redistogo:nano"
+  ],
   "env": {
     "TELEGRAM_TOKEN": {
       "description": "Your bot's token.",
@@ -20,6 +22,10 @@
     "REDISTOGO_URL": {
       "description": "redis connection url",
       "required": true
+    },
+    "MOBILE_LK_URL": {
+      "description": "link to your mobile provider",
+      "required": false
     },
     "DELAY": {
       "description": "delay in seconds for periodic tasks",

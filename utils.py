@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
+import datetime
+import logging
+import os
 import requests
+
+logger = logging.getLogger(__name__)
+
+mobile_lk_url = os.environ["MOBILE_LK_URL"]
 
 
 def get_weather(weather_token: str, city_id: int = 550280) -> str:
@@ -17,19 +24,19 @@ def get_weather(weather_token: str, city_id: int = 550280) -> str:
     return f"{round(data['main']['temp'], 1)}C, {data['weather'][0]['description']}"
 
 
-def get_ststel_data(login: str, password: str) -> dict:
+def get_mobile_data(login: str, password: str) -> dict:
     """
 
     :param login:
     :param password:
     :return:
     """
-    url = "http://ststel.ru/lk/submit.php"
+    url = mobile_lk_url
     header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0"}
     payload = {"phone": str(login), "pass": str(password)}
     a, b, i = 0, 0, 0
     with requests.Session() as s:
-        # we need while because ststel returns zeroes some times
+        # we need while because provider returns zeroes some times
         while a == 0 and b == 0:
             r = s.post(url, data=payload, headers=header)
             if r.status_code != 200:
@@ -48,11 +55,11 @@ def get_ststel_data(login: str, password: str) -> dict:
 def get_all_mobile_bills(all_users):
     result = dict()
     for item in all_users:
-        result[item[0]] = get_ststel_data(**item)
+        result[item[0]] = get_mobile_data(**item)
     return result
 
 
-def print_ststel_info(data: dict) -> str:
+def print_mobile_info(data: dict) -> str:
     """
 
     :param data: data from
@@ -67,11 +74,11 @@ def print_ststel_info(data: dict) -> str:
         i = "Mb"
 
     if int(data["balance"]) != int(data["effectiveBalance"]):
-        balans = data["balance"]
+        balance = data["balance"]
     else:
-        balans = data["balance"], data["effectiveBalance"]
+        balance = data["balance"], data["effectiveBalance"]
 
-    return f"""Осталось {internet} {i}. Баланс: {balans} р. """
+    return f"""Осталось {internet} {i}. Баланс: {balance} р. """
 
 
 def free_time(message, redis_client) -> str:
@@ -81,7 +88,12 @@ def free_time(message, redis_client) -> str:
     """
 
     user_id = message.from_user.id
+    utc_now = datetime.datetime.utcnow()
     param = message.text.split("/time ")
+    interacts = redis_client.get(f"{user_id}_interacts") if redis_client.get(f"{user_id}_interacts") else 0
+    interacts_update = redis_client.set(f"{user_id}_interacts", int(interacts) + 1)
+    redis_client.set(f"{user_id}_last_interact_timestamp", utc_now.timestamp())
+    logger.info(f"{user_id=}\n{utc_now.strftime('%Y-%m-%d %H:%M:%S')}\n{param=}\n{interacts=}\n{interacts_update=}")
 
     if param == ["/time"]:
         random_element_from_set = redis_client.srandmember(user_id)
@@ -106,3 +118,16 @@ def free_time(message, redis_client) -> str:
                 return "add some."
             else:
                 return f"{data_to_add} already in your list."
+
+
+def free_time_log(users, redis_client) -> str:
+    result = ""
+    for user_id in users:
+        interacts = redis_client.get(f"{user_id}_interacts").decode() if redis_client.get(f"{user_id}_interacts") else 0
+        last_interact_ts = redis_client.get(f"{user_id}_last_interact_timestamp")
+        if last_interact_ts:
+            last_interact_ts = last_interact_ts.decode()
+            last_interact_ts = datetime.datetime.fromtimestamp(float(last_interact_ts)).strftime("%Y-%m-%d %H:%M:%S")
+        result += f"{user_id}:\n {interacts=}\n{last_interact_ts=}\n\n"
+
+    return result

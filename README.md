@@ -78,7 +78,7 @@ refactor connections:
 use connection pool for postgres  
 move from redis to aioredis  
 move from psycopg2 to asyncpg  
-
+redis do postgres backup (new users, TODOes...)  
 refactor time button  
 
 Wanna new features? [Create an issue](https://github.com/rvalien/GladOs/issues) on this repo.

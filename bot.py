@@ -1,16 +1,15 @@
 import asyncio
+import logging
 import os
 import psycopg2
 import redis
-import asyncpg
-import logging
 
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils import executor
 from aiogram.dispatcher.filters import Text
-from utils import get_weather, get_ststel_data, print_ststel_info, free_time
+from utils import get_weather, get_mobile_data, print_mobile_info, free_time, free_time_log
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,10 +30,8 @@ cursor = conn.cursor()
 
 CLIENT = redis.from_url(redis_url)
 
-chat_ids = []
 cursor.execute("select chat_id from users")
-for item in cursor.fetchall():
-    chat_ids.append(item[0])
+chat_ids = list(map(lambda x: x[0], cursor.fetchall()))
 logger.info(chat_ids)
 
 markup = ReplyKeyboardMarkup()
@@ -69,7 +66,7 @@ async def internet_left_worker(message):
     cursor = conn.cursor()
     cursor.execute(f"select phone, password from users where chat_id = {message['from']['id']}")
     res = cursor.fetchone()
-    await message.reply(str(print_ststel_info(get_ststel_data(*res))))
+    await message.reply(str(print_mobile_info(get_mobile_data(*res))))
 
 
 @dp.message_handler(Text(equals="bill"))
@@ -83,7 +80,7 @@ async def get_bill_worker(message):
     def get_all_mobile_bills(all_users):
         result = dict()
         for user in all_users:
-            result[user[2]] = get_ststel_data(login=user[0], password=user[1])
+            result[user[2]] = get_mobile_data(login=user[0], password=user[1])
         return result
 
     def _prepare_response_text(data):
@@ -94,6 +91,19 @@ async def get_bill_worker(message):
         return "\n".join(temp_list)
 
     await message.reply(_prepare_response_text(get_all_mobile_bills(res)))
+
+
+@dp.message_handler(commands=["log"])
+async def get_free_time_log_worker(message):
+    await types.ChatActions.typing(2)
+    conn = psycopg2.connect(database)
+    cursor = conn.cursor()
+    cursor.execute("select chat_id from users")
+    users = list(map(lambda x: x[0], cursor.fetchall()))
+    logger.info("=" * 30)
+    logger.info(users)
+    logger.info("=" * 30)
+    await message.reply(free_time_log(users, CLIENT))
 
 
 @dp.message_handler(commands=["myid"])
