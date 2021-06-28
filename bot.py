@@ -9,7 +9,7 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils import executor
 from aiogram.dispatcher.filters import Text
-from utils import get_weather, get_mobile_data, print_mobile_info, free_time, free_time_log
+from utils import get_weather, get_mobile_data, print_mobile_info, rest_time, work_time, free_time_log
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,8 +35,8 @@ chat_ids = list(map(lambda x: x[0], cursor.fetchall()))
 logger.info(chat_ids)
 
 markup = ReplyKeyboardMarkup()
-markup.row(KeyboardButton("weather"), KeyboardButton("/time"))
-markup.row(KeyboardButton("internet"), KeyboardButton("bill"))
+markup.row(KeyboardButton("/work"), KeyboardButton("/rest"))
+markup.row(KeyboardButton("weather"), KeyboardButton("internet"), KeyboardButton("bill"))
 
 
 @dp.message_handler(commands=["start"])
@@ -53,10 +53,17 @@ async def weather_worker(message):
     await message.reply(get_weather(weather_token))
 
 
-@dp.message_handler(commands=["time"])
+@dp.message_handler(commands=["rest"])
 async def free_time_worker(message):
     await types.ChatActions.typing(1)
-    await message.reply(free_time(message, CLIENT))
+    await message.reply(rest_time(message, CLIENT))
+
+
+@dp.message_handler(commands=["work"])
+async def work_time_worker(message):
+    await types.ChatActions.typing(1)
+    await message.reply(work_time(message, CLIENT))
+
 
 
 @dp.message_handler(Text(equals="internet"))
