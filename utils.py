@@ -3,6 +3,8 @@ import datetime
 import logging
 import os
 import requests
+from itertools import product
+
 
 logger = logging.getLogger(__name__)
 
@@ -159,10 +161,10 @@ def work_time(message, redis_client) -> str:
                 return f"{data_to_add} already in your list."
 
 
-def rest_time_log(users, redis_client) -> str:
+def usage_log(users, redis_client) -> str:
     result = ""
-    for user_id in users:
-        user_id = f"{user_id}_rest"
+    for user, command in product(users, ("work", "rest")):
+        user_id = f"{user}_{command}"
         interacts = redis_client.get(f"{user_id}_interacts").decode() if redis_client.get(f"{user_id}_interacts") else 0
         last_interact_ts = redis_client.get(f"{user_id}_last_interact_timestamp")
         if last_interact_ts:

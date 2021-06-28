@@ -9,7 +9,7 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils import executor
 from aiogram.dispatcher.filters import Text
-from utils import get_weather, get_mobile_data, print_mobile_info, rest_time, work_time, free_time_log
+from utils import get_weather, get_mobile_data, print_mobile_info, rest_time, work_time, usage_log
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,9 +42,7 @@ markup.row(KeyboardButton("weather"), KeyboardButton("internet"), KeyboardButton
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
     await types.ChatActions.typing(1)
-    await message.reply(
-        "Hello, i'm GladOS. beep boop...\n", reply_markup=markup
-    )
+    await message.reply("Hello, i'm GladOS. beep boop...\n", reply_markup=markup)
 
 
 @dp.message_handler(Text(equals="weather"))
@@ -63,7 +61,6 @@ async def free_time_worker(message):
 async def work_time_worker(message):
     await types.ChatActions.typing(1)
     await message.reply(work_time(message, CLIENT))
-
 
 
 @dp.message_handler(Text(equals="internet"))
@@ -110,7 +107,7 @@ async def get_free_time_log_worker(message):
     logger.info("=" * 30)
     logger.info(users)
     logger.info("=" * 30)
-    await message.reply(free_time_log(users, CLIENT))
+    await message.reply(usage_log(users, CLIENT))
 
 
 @dp.message_handler(commands=["myid"])
