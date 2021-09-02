@@ -137,7 +137,6 @@ async def meter_reading(message: types.Message):
     await message.reply("внеси потребление ⚡ T")
 
 
-@dp.message_handler(state="*", commands="cancel")
 @dp.message_handler(Text(equals="отмена", ignore_case=True), state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
