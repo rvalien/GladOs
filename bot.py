@@ -1,20 +1,23 @@
 import asyncio
+import datetime
 import logging
 import os
 import psycopg2
 import redis
+# import pika
 
 from aiogram import Bot, types
-from aiogram.dispatcher import Dispatcher
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from aiogram.utils import executor
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext, Dispatcher
 from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ParseMode
+from aiogram.utils import executor, markdown as md
 from utils import get_weather, get_mobile_data, print_mobile_info, rest_time, work_time, usage_log
 
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -23,7 +26,8 @@ database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
 
 bot = Bot(token=telegram_token)
-dp = Dispatcher(bot)
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
 
 conn = psycopg2.connect(database)
 cursor = conn.cursor()
@@ -35,7 +39,8 @@ chat_ids = list(map(lambda x: x[0], cursor.fetchall()))
 logger.info(chat_ids)
 
 markup = ReplyKeyboardMarkup()
-markup.row(KeyboardButton("/work"), KeyboardButton("/rest"))
+markup.row(KeyboardButton("/led_on"), KeyboardButton("/led_off"))
+markup.row(KeyboardButton("/work"), KeyboardButton("/rest"), KeyboardButton("🏡"))
 markup.row(KeyboardButton("weather"), KeyboardButton("internet"), KeyboardButton("bill"))
 
 
@@ -114,6 +119,102 @@ async def get_free_time_log_worker(message):
 async def debug_worker(message):
     await types.ChatActions.typing(2)
     await message.reply(message.from_user)
+
+
+class Form(StatesGroup):
+    t = State()
+    t1 = State()
+    t2 = State()
+    cw = State()
+    hw = State()
+    valid = State()
+
+
+@dp.message_handler(Text(equals="🏡"))
+async def meter_reading(message: types.Message):
+    await Form.t.set()
+    await types.ChatActions.typing(.2)
+    await message.reply("внеси потребление ⚡ T")
+
+
+@dp.message_handler(state="*", commands="cancel")
+@dp.message_handler(Text(equals="отмена", ignore_case=True), state="*")
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    await state.finish()
+    await types.ChatActions.typing(.2)
+    await message.reply("ОК")
+
+
+@dp.message_handler(state=Form.t)
+async def process_t(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data["t"] = message.text
+
+    await Form.next()
+    await types.ChatActions.typing(.2)
+    await message.reply("чудно, а теперь внеси потребление ⚡T1️⃣")
+
+
+@dp.message_handler(lambda message: message.text.isdigit(), state=Form.t1)
+async def process_t1(message: types.Message, state: FSMContext):
+    await Form.next()
+    await state.update_data(t1=int(message.text))
+    await types.ChatActions.typing(.2)
+    await message.reply("чудно, а теперь внеси потребление ⚡T2️⃣")
+
+
+@dp.message_handler(lambda message: message.text.isdigit(), state=Form.t2)
+async def process_t2(message: types.Message, state: FSMContext):
+    await Form.next()
+    await state.update_data(t2=int(message.text))
+    await types.ChatActions.typing(.2)
+    await message.reply("славно, а теперь потребление 🥶🌊")
+
+
+@dp.message_handler(lambda message: message.text.isdigit(), state=Form.cw)
+async def process_cw(message: types.Message, state: FSMContext):
+    await Form.next()
+    await state.update_data(cw=int(message.text))
+    await types.ChatActions.typing(.2)
+    await message.reply("и наконец, внеси потребление 🥵🌊")
+
+
+@dp.message_handler(state=Form.hw)
+async def process_hw(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data["hw"] = message.text
+        now = datetime.datetime.now().date()
+        logger.info(now)
+        logger.info(data)
+        query = f"""
+        insert into flat (t, t1, t2, cold, hot, "date")
+        values ({data["t"]}, {data["t1"]}, {data["t2"]}, {data["cw"]}, {data["hw"]}, current_date);"""
+
+        with psycopg2.connect(database) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+
+        await types.ChatActions.typing(.2)
+        await bot.send_message(
+            message.chat.id,
+            md.text(
+                md.bold(f"сохранены показания на {now.strftime('%Y %m %d')}"),
+                md.text("электроэнергия T:", md.code(data["t"])),
+                md.text("электроэнергия T1:", md.code(data["t1"])),
+                md.text("электроэнергия T2:", md.code(data["t2"])),
+                md.text("холодная вода:", md.code(data["cw"])),
+                md.text("горячая вода:", md.code(data["hw"])),
+                sep="\n",
+            ),
+            reply_markup=markup,
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+        await state.finish()
 
 
 def repeat(coro, loop):
