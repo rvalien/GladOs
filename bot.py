@@ -4,16 +4,18 @@ import logging
 import os
 import psycopg2
 import redis
-# import pika
 
+# import pika
+from states import HomeForm
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext, Dispatcher
 from aiogram.dispatcher.filters import Text
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ParseMode
+from aiogram.types import ParseMode
 from aiogram.utils import executor, markdown as md
+
 from utils import get_weather, get_mobile_data, print_mobile_info, rest_time, work_time, usage_log
+from keyboards import markup
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,52 +27,56 @@ weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
 
+# # mqtt
+# url = os.environ.get("CLOUDAMQP_URL")
+# params = pika.URLParameters(url)
+# connections = pika.BlockingConnection(params)
+# channel = connections.channel()
+#
+# channel.exchange_declare("test_exchange")
+# # channel.queue_declare("mqtt-subscription-ESP8266qos0", auto_delete=False)
+# channel.queue_bind("mqtt-subscription-ESP8266qos0", "test_exchange", "led_on_off")
+
 bot = Bot(token=telegram_token)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 conn = psycopg2.connect(database)
 cursor = conn.cursor()
-
 CLIENT = redis.from_url(redis_url)
 
 cursor.execute("select chat_id from users")
 chat_ids = list(map(lambda x: x[0], cursor.fetchall()))
 logger.info(chat_ids)
 
-markup = ReplyKeyboardMarkup()
-markup.row(KeyboardButton("/led_on"), KeyboardButton("/led_off"))
-markup.row(KeyboardButton("/work"), KeyboardButton("/rest"), KeyboardButton("🏡"))
-markup.row(KeyboardButton("weather"), KeyboardButton("internet"), KeyboardButton("bill"))
-
 
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
-    await types.ChatActions.typing(1)
+    await types.ChatActions.typing(0.5)
     await message.reply("Hello, i'm GladOS. beep boop...\n", reply_markup=markup)
 
 
 @dp.message_handler(Text(equals="weather"))
 async def weather_worker(message):
-    await types.ChatActions.typing(1)
+    await types.ChatActions.typing(0.5)
     await message.reply(get_weather(weather_token))
 
 
 @dp.message_handler(commands=["rest"])
 async def free_time_worker(message):
-    await types.ChatActions.typing(1)
+    await types.ChatActions.typing(0.5)
     await message.reply(rest_time(message, CLIENT))
 
 
 @dp.message_handler(commands=["work"])
 async def work_time_worker(message):
-    await types.ChatActions.typing(1)
+    await types.ChatActions.typing(0.5)
     await message.reply(work_time(message, CLIENT))
 
 
 @dp.message_handler(Text(equals="internet"))
 async def internet_left_worker(message):
-    await types.ChatActions.typing(2)
+    await types.ChatActions.typing(0.5)
     conn = psycopg2.connect(database)
     cursor = conn.cursor()
     cursor.execute(f"select phone, password from users where chat_id = {message['from']['id']}")
@@ -80,7 +86,7 @@ async def internet_left_worker(message):
 
 @dp.message_handler(Text(equals="bill"))
 async def get_bill_worker(message):
-    await types.ChatActions.typing(2)
+    await types.ChatActions.typing(0.5)
     conn = psycopg2.connect(database)
     cursor = conn.cursor()
     cursor.execute("select phone, password, name from users")
@@ -104,7 +110,7 @@ async def get_bill_worker(message):
 
 @dp.message_handler(commands=["log"])
 async def get_free_time_log_worker(message):
-    await types.ChatActions.typing(2)
+    await types.ChatActions.typing(0.5)
     conn = psycopg2.connect(database)
     cursor = conn.cursor()
     cursor.execute("select chat_id from users")
@@ -117,103 +123,110 @@ async def get_free_time_log_worker(message):
 
 @dp.message_handler(commands=["myid"])
 async def debug_worker(message):
-    await types.ChatActions.typing(2)
+    await types.ChatActions.typing(0.5)
     await message.reply(message.from_user)
-
-
-class Form(StatesGroup):
-    t = State()
-    t1 = State()
-    t2 = State()
-    cw = State()
-    hw = State()
-    valid = State()
 
 
 @dp.message_handler(Text(equals="🏡"))
 async def meter_reading(message: types.Message):
-    await Form.t.set()
-    await types.ChatActions.typing(.2)
-    await message.reply("внеси потребление ⚡ T")
+    await types.ChatActions.typing(0.5)
+    await HomeForm.t.set()
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["cancel"]
+    keyboard.add(*buttons)
+    welcome_message = """
+    Передача показаний ПУ.\nДля прекращения операции - напиши `cancel` или нажми кнопку `cancel`.\nВнеси потребление ⚡ T
+    """
+    await message.reply(welcome_message, reply_markup=keyboard)
 
 
-@dp.message_handler(Text(equals="отмена", ignore_case=True), state="*")
+@dp.message_handler(Text(equals="cancel", ignore_case=True), state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
 
     await state.finish()
-    await types.ChatActions.typing(.2)
-    await message.reply("ОК")
+    await types.ChatActions.typing(0.5)
+    await message.reply("ОК", reply_markup=markup)
 
 
-@dp.message_handler(state=Form.t)
+@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t)
 async def process_t(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.reply("введено не число")
+
     async with state.proxy() as data:
-        data["t"] = message.text
+        data["t"] = int(message.text)
 
-    await Form.next()
-    await types.ChatActions.typing(.2)
-    await message.reply("чудно, а теперь внеси потребление ⚡T1️⃣")
+    await HomeForm.next()
+    await message.reply("чудно, а теперь потребление ⚡T1")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=Form.t1)
+@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t1)
 async def process_t1(message: types.Message, state: FSMContext):
-    await Form.next()
+    await HomeForm.next()
     await state.update_data(t1=int(message.text))
-    await types.ChatActions.typing(.2)
-    await message.reply("чудно, а теперь внеси потребление ⚡T2️⃣")
+    await message.reply("чудно, а теперь потребление ⚡T2")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=Form.t2)
+@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t2)
 async def process_t2(message: types.Message, state: FSMContext):
-    await Form.next()
+    await HomeForm.next()
     await state.update_data(t2=int(message.text))
-    await types.ChatActions.typing(.2)
     await message.reply("славно, а теперь потребление 🥶🌊")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=Form.cw)
+@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.cw)
 async def process_cw(message: types.Message, state: FSMContext):
-    await Form.next()
+    await HomeForm.next()
     await state.update_data(cw=int(message.text))
-    await types.ChatActions.typing(.2)
     await message.reply("и наконец, внеси потребление 🥵🌊")
 
 
-@dp.message_handler(state=Form.hw)
+@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.hw)
 async def process_hw(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data["hw"] = message.text
-        now = datetime.datetime.now().date()
-        logger.info(now)
-        logger.info(data)
+        data["hw"] = int(message.text)
+
+    now = datetime.datetime.now().date()
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text="передать показания", callback_data="save_to_db"))
+    await message.answer(
+        md.text(
+            md.bold(f"показания на {now.strftime('%Y %m %d')}"),
+            md.text("электроэнергия T:", md.code(data["t"])),
+            md.text("электроэнергия T1:", md.code(data["t1"])),
+            md.text("электроэнергия T2:", md.code(data["t2"])),
+            md.text("холодная вода:", md.code(data["cw"])),
+            md.text("горячая вода:", md.code(data["hw"])),
+            sep="\n",
+        ),
+        reply_markup=keyboard,
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    await HomeForm.next()
+
+
+@dp.callback_query_handler(text="save_to_db", state=HomeForm.fin)
+async def save_to_db(call: types.CallbackQuery, state: FSMContext):
+    logger.info(await state.get_data())
+
+    async with state.proxy() as data:
         query = f"""
         insert into flat (t, t1, t2, cold, hot, "date")
-        values ({data["t"]}, {data["t1"]}, {data["t2"]}, {data["cw"]}, {data["hw"]}, current_date);"""
+        values ({data["t"]}, {data["t1"]}, {data["t2"]}, {data["cw"]}, {data["hw"]}, current_date);
+        """
+    logger.info(query)
 
-        with psycopg2.connect(database) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(query)
+    with psycopg2.connect(database) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
 
-        await types.ChatActions.typing(.2)
-        await bot.send_message(
-            message.chat.id,
-            md.text(
-                md.bold(f"сохранены показания на {now.strftime('%Y %m %d')}"),
-                md.text("электроэнергия T:", md.code(data["t"])),
-                md.text("электроэнергия T1:", md.code(data["t1"])),
-                md.text("электроэнергия T2:", md.code(data["t2"])),
-                md.text("холодная вода:", md.code(data["cw"])),
-                md.text("горячая вода:", md.code(data["hw"])),
-                sep="\n",
-            ),
-            reply_markup=markup,
-            parse_mode=ParseMode.MARKDOWN,
-        )
-
-        await state.finish()
+    await call.message.answer("saved", reply_markup=markup)
+    await call.answer(text="Спасибо, что воспользовались ботом!")
+    await state.finish()
 
 
 def repeat(coro, loop):
