@@ -79,9 +79,7 @@ CREATE TABLE public.chat_ids (
 
 ---
 ### todo
-refactor connections:  
 move from redis to aioredis  
 redis do postgres backup (new users, TODOes...)  
-refactor time button  
 
 Wanna new features? [Create an issue](https://github.com/rvalien/GladOs/issues) on this repo.
