@@ -233,4 +233,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     logging.basicConfig(level=logging.INFO)
     # loop.call_later(delay, repeat, some_task, loop)
-    asyncio.run(executor.start_polling(dp, on_startup=on_startup, loop=loop))
+    asyncio.run(executor.start_polling(dp, on_startup=on_startup, loop=loop, skip_updates=True))
