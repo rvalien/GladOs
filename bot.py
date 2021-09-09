@@ -71,14 +71,14 @@ async def work_time_worker(message):
 
 @dp.message_handler(Text(equals="internet"))
 async def internet_left_worker(message):
-    await types.ChatActions.typing(0.5)
-    user = await db_gino.User.get(str(message.from_user.id))
+    await types.ChatActions.typing(1)
+    user = await db_gino.User.get(message.from_user.id)
     await message.reply(mobile_utils.get_internet_limit_text(user))
 
 
 @dp.message_handler(Text(equals="bill"))
 async def get_bill_worker(message):
-    await types.ChatActions.typing(0.5)
+    await types.ChatActions.typing(1)
     users = await db_gino.User.query.gino.all()
     await message.reply(mobile_utils.get_all_bills_text(users))
 
