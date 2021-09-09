@@ -1,7 +1,8 @@
 #this file need for heroku build
 
-aiogram==2.14.3
-psycopg2==2.9.1
-redis==3.5.3
-requests==2.26.0
-pika==1.2.0
+aiogram>=2.14.3
+redis>=3.5.3
+requests>=2.26.0
+pika>=1.2.0
+gino
+aioschedule>=0.5.2

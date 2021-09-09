@@ -3,7 +3,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![Python-Versions](https://img.shields.io/badge/python-3.9-blue)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rvalien/orbbot/master/LICENSE)
-[![Discord.py-Version](https://img.shields.io/badge/aiogram-2.13-blue)](https://pypi.org/project/discord.py/) 
+[![Discord.py-Version](https://img.shields.io/badge/aiogram-2.13-blue)](https://pypi.org/project/discord.py/)
 
 ### description
 
@@ -16,7 +16,7 @@ Create for experiments. Now it helps me with routine.
 can help you to choose what to do in your free time.  
 #### Usage:
 `/time` - fetch random element from your todo list if list is not empty.  
-`/time game1` - add 1 element to your todo list.  
+`/time game1` - add 1 element `game1` to your todo list.  
 `/time reading, sleep, bath` - add multiple elements to your todo list.  
 `/time all` - show all your opportunities in list.  
 `/time clean` - clean up your list.
@@ -39,6 +39,10 @@ Weather in my hometown.
 
 ### /myid  
 debug help command
+
+
+### /flat 🏡
+send flat meters data to database.
 
 ---
 
@@ -75,9 +79,7 @@ CREATE TABLE public.chat_ids (
 ---
 ### todo
 refactor connections:  
-use connection pool for postgres  
 move from redis to aioredis  
-move from psycopg2 to asyncpg  
 redis do postgres backup (new users, TODOes...)  
 refactor time button  
 
