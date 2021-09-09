@@ -1,6 +1,8 @@
-from gino import Gino
-from aiogram import Dispatcher
+import logging
 import os
+
+from aiogram import Dispatcher
+from gino import Gino
 
 db = Gino()
 
@@ -26,5 +28,5 @@ class Flat(db.Model):
 
 
 async def on_startup(dispatcher: Dispatcher):
-    print("Установка связи с PostgreSQL")
+    logging.info("set bind to PostgreSQL")
     await db.set_bind(os.environ["DATABASE_URL"])

@@ -1,6 +1,7 @@
+import json
 import logging
 import os
-import json
+
 from aiogram import Dispatcher
 
 ADMIN = json.loads(os.environ['ADMIN'])

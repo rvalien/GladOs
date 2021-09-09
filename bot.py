@@ -1,24 +1,32 @@
+"""
+this bot made with ❤️
+"""
+
+__author__ = "Valien"
+__version__ = "2021.9.9"
+__maintainer__ = "Valien"
+__link__ = "https://github.com/rvalien/GladOs"
+
+import aioschedule as schedule
 import asyncio
 import datetime
 import logging
 import os
 import redis
-import aioschedule as schedule
 
 # import pika
-from states import HomeForm
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import FSMContext, Dispatcher
 from aiogram.dispatcher.filters import Text
 from aiogram.types import ParseMode
 from aiogram.utils import executor, markdown as md
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from states import HomeForm
 
+from keyboards import markup
 from utils import redis_utils, mobile_utils, weather
 from utils.db_api import db_gino
-# from utils.db_api.db_gino import db
-from keyboards import markup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -46,7 +54,7 @@ CLIENT = redis.from_url(redis_url)
 
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
-    logging.warning('Starting connection.')
+    logging.warning("Starting connection.")
     await types.ChatActions.typing(0.5)
     await message.reply("Hello, i'm GladOS. beep boop...\n", reply_markup=markup)
 
@@ -212,9 +220,10 @@ async def on_startup(dispatcher):
     # middlewares.setup(dp)
 
     from utils.notify_admins import on_startup_notify
-    print("Подключаем БД")
+
+    logging.info("connecting to database")
     await db_gino.on_startup(dp)
-    print("Готово")
+    logging.info("Done")
     await on_startup_notify(dispatcher)
     # Запускает таймер для первой игры
     asyncio.create_task(scheduler())
