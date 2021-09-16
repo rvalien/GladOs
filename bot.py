@@ -68,13 +68,13 @@ async def weather_worker(message):
 @dp.message_handler(commands=["rest"])
 async def free_time_worker(message):
     await types.ChatActions.typing(0.5)
-    await message.reply(redis_utils.rest_time(message, CLIENT))
+    await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
 
 
 @dp.message_handler(commands=["work"])
 async def work_time_worker(message):
     await types.ChatActions.typing(0.5)
-    await message.reply(redis_utils.work_time(message, CLIENT))
+    await message.reply(redis_utils.its_time_to(message, CLIENT, "work"))
 
 
 @dp.message_handler(Text(equals="internet"))

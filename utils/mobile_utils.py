@@ -1,9 +1,11 @@
 import os
 import requests
+import logging
 
 mobile_lk_url = os.environ["MOBILE_LK_URL"]
 
 
+# TODO кровь из глаз - переписать
 def get_mobile_data(login: str, password: str) -> dict:
     """
 
@@ -24,7 +26,7 @@ def get_mobile_data(login: str, password: str) -> dict:
             else:
                 foo = r.json()["customers"]
                 if len(foo) != 1:
-                    print(f"error: {foo=}, {len(foo)=}")
+                    logging.warning(f"error: {foo=}, {len(foo)=}")
                 else:
                     foo = foo[0]
                     a, b = foo["ctnInfo"]["balance"], foo["ctnInfo"]["rest_internet_current"]
@@ -46,12 +48,8 @@ def print_mobile_info(data: dict) -> str:
     else:
         i = "Mb"
 
-    if int(data["balance"]) != int(data["effectiveBalance"]):
-        balance = data["balance"]
-    else:
-        balance = data["balance"], data["effectiveBalance"]
-
-    return f"""Осталось {internet} {i}. Баланс: {balance} р. """
+    balance = data["balance"] if int(data["balance"]) != int(data["effectiveBalance"]) else data["effectiveBalance"]
+    return f"Осталось {internet} {i}. Баланс: {balance} р."
 
 
 def get_all_mobile_bills(all_users):
@@ -61,7 +59,7 @@ def get_all_mobile_bills(all_users):
     return result
 
 
-def prepare_response_text(data):
+def prepare_response_text(data: dict) -> str:
     temp_list = list()
     for key in data.keys():
         temp = f'{key}: {data[key].get("effectiveBalance") if data[key].get("effectiveBalance") else data[key].get("balance")}'

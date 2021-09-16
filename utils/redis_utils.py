@@ -6,60 +6,28 @@ from itertools import product
 logger = logging.getLogger(__name__)
 
 
-def rest_time(message, redis_client) -> str:
-    """
-    commands (all, clean)
-    :return: short string
-    """
-
-    user_id = f"{message.from_user.id}_rest"
+def set_last_interact(redis_client, user_id, param):
     utc_now = datetime.datetime.utcnow()
-    param = message.text.split("/rest ")
     interacts = redis_client.get(f"{user_id}_interacts") if redis_client.get(f"{user_id}_interacts") else 0
     interacts_update = redis_client.set(f"{user_id}_interacts", int(interacts) + 1)
     redis_client.set(f"{user_id}_last_interact_timestamp", utc_now.timestamp())
     logger.info(f"{user_id=}\n{utc_now.strftime('%Y-%m-%d %H:%M:%S')}\n{param=}\n{interacts=}\n{interacts_update=}")
 
-    if param == ["/rest"]:
-        random_element_from_set = redis_client.srandmember(user_id)
-        if random_element_from_set:
-            return random_element_from_set.decode()
-        else:
-            return "nothing in your list"
-    else:
-        if param[-1] == "all":
-            set_elements = redis_client.smembers(user_id)
-            return f"all list:\n {', '.join(map(bytes.decode, set_elements))}"
 
-        elif param[-1] == "clean":
-            redis_client.delete(user_id)
-            return "clean done"
-
-        else:
-            data_to_add = param[-1].casefold().split(", ")
-
-            add_result = redis_client.sadd(user_id, *data_to_add)
-            if add_result == 1:
-                return "add some."
-            else:
-                return f"{data_to_add} already in your list."
-
-
-def work_time(message, redis_client) -> str:
+def its_time_to(message, redis_client, key: str) -> str:
     """
+    message: aiogram.types.message.Message
+    redis_client: redis.client.Redis
+    key - `work` or `rest`
     commands (all, clean)
     :return: short string
     """
+    user_id = f"{message.from_user.id}_{key}"
+    param = message.text.split(f"/{key} ")
 
-    user_id = f"{message.from_user.id}_work"
-    utc_now = datetime.datetime.utcnow()
-    param = message.text.split("/work ")
-    interacts = redis_client.get(f"{user_id}_interacts") if redis_client.get(f"{user_id}_interacts") else 0
-    interacts_update = redis_client.set(f"{user_id}_interacts", int(interacts) + 1)
-    redis_client.set(f"{user_id}_last_work_interact_timestamp", utc_now.timestamp())
-    logger.info(f"{user_id=}\n{utc_now.strftime('%Y-%m-%d %H:%M:%S')}\n{param=}\n{interacts=}\n{interacts_update=}")
+    set_last_interact(redis_client, user_id, key)
 
-    if param == ["/work"]:
+    if param == [f"/{key}"]:
         random_element_from_set = redis_client.srandmember(user_id)
         if random_element_from_set:
             return random_element_from_set.decode()
