@@ -41,7 +41,7 @@ Weather in my hometown.
 debug help command
 
 
-### /flat 🏡
+### 🏡
 send flat meters data to database.
 
 ---
