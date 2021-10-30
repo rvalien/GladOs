@@ -9,3 +9,10 @@ class HomeForm(StatesGroup):
     cold = State()
     hot = State()
     date = State()
+    previous_t = State()
+    previous_t1 = State()
+    previous_t2 = State()
+    previous_cold = State()
+    previous_hot = State()
+    previous_date = State()
+

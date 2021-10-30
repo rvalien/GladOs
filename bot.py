@@ -34,6 +34,8 @@ weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
 
+ALERT_LIMIT = 5
+
 # # mqtt
 # url = os.environ.get("CLOUDAMQP_URL")
 # params = pika.URLParameters(url)
@@ -107,16 +109,34 @@ async def debug_worker(message):
 
 
 @dispatcher.message_handler(Text(equals="🏡"))
-async def meter_reading(message: types.Message):
+async def meter_reading(message: types.Message, state: FSMContext):
     await types.ChatActions.typing(0.5)
     await HomeForm.t.set()
+
+    # previous_data
+    last_dt = await db.first(db.text("select date from flat order by date desc LIMIT 1"))
+    last_dt = last_dt[0]
+    previous_data = await Flat.query.where(Flat.date == last_dt).gino.first()
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     buttons = ["cancel"]
     keyboard.add(*buttons)
-    welcome_message = """
-    Передача показаний ПУ.\nДля прекращения операции - напиши `cancel` или нажми кнопку `cancel`.\nВнеси потребление ⚡ T
-    """
+    welcome_message = f"""Передача показаний ПУ.\nПоказания на {previous_data.date}
+    Т: {previous_data.t}
+    Т1: {previous_data.t1}
+    Т2: {previous_data.t2}
+    холодная: {previous_data.cold}
+    горячая: {previous_data.hot}\n
+Для прекращения операции - напиши `cancel` или воспользуйся кнопкой `cancel`.\n\nВнеси потребление ⚡ T"""
+
+    async with state.proxy() as data:
+        data["previous_t"] = previous_data.t
+        data["previous_t1"] = previous_data.t1
+        data["previous_t2"] = previous_data.t2
+        data["previous_cold"] = previous_data.cold
+        data["previous_hot"] = previous_data.hot
+        data["previous_date"] = previous_data.date
+
     await message.reply(welcome_message, reply_markup=keyboard)
 
 
@@ -131,13 +151,34 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     await message.reply("ОК", reply_markup=markup)
 
 
+def make_compare_error_message(current: int, previous: int, alarm_value: int = None) -> str:
+    if current <= previous:
+        return f"""Внесённые показания {'меньше предыдущих' if current < previous else 'идентичны предыдущим'}.
+{md.code(previous)}. Повторите ввод."""
+
+    if alarm_value and (current - previous) > alarm_value:
+        return f"слишком большая разница между показаниями {current} и {previous}"
+
+
 @dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t)
 async def process_t(message: types.Message, state: FSMContext):
     if not message.text.isdigit():
         return await message.reply("введено не число")
 
+    previous_data = await state.get_data()
+    input_value = int(message.text)
+
+    if previous_data:
+        previous = previous_data.get("previous_t")
+
+        error_message = make_compare_error_message(
+            current=input_value, previous=previous, alarm_value=ALERT_LIMIT * 60
+        )
+        if error_message:
+            return await message.reply(error_message)
+
     async with state.proxy() as data:
-        data["t"] = int(message.text)
+        data["t"] = input_value
 
     await HomeForm.next()
     await message.reply("чудно, а теперь потребление ⚡T1")
@@ -145,56 +186,88 @@ async def process_t(message: types.Message, state: FSMContext):
 
 @dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t1)
 async def process_t1(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.reply("введено не число")
+
+    previous_data = await state.get_data()
+    input_value = int(message.text)
+
+    if previous_data:
+        previous = previous_data.get("previous_t1")
+
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=ALERT_LIMIT)
+        if error_message:
+            return await message.reply(error_message)
+
     await HomeForm.next()
-    await state.update_data(t1=int(message.text))
+    await state.update_data(t1=input_value)
     await message.reply("чудно, а теперь потребление ⚡T2")
 
 
 @dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t2)
 async def process_t2(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.reply("введено не число")
+
+    previous_data = await state.get_data()
+    input_value = int(message.text)
+
+    if previous_data:
+        previous = previous_data.get("previous_t2")
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=ALERT_LIMIT)
+        if error_message:
+            return await message.reply(error_message)
+
     await HomeForm.next()
-    await state.update_data(t2=int(message.text))
+    await state.update_data(t2=input_value)
     await message.reply("славно, а теперь потребление 🥶🌊")
 
 
 @dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.cold)
 async def process_cold_water(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.reply("введено не число")
+
+    previous_data = await state.get_data()
+    input_value = int(message.text)
+
+    if previous_data:
+        previous = previous_data.get("previous_cold")
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=ALERT_LIMIT)
+        if error_message:
+            return await message.reply(error_message)
+
     await HomeForm.next()
-    await state.update_data(cold=int(message.text))
+    await state.update_data(cold=input_value)
     await message.reply("и наконец, внеси потребление 🥵🌊")
 
 
-# @dispatcher.message_handler(commands=["test"])
 @dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.hot)
 async def process_hot_water(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data["hot"] = int(message.text)
+    if not message.text.isdigit():
+        return await message.reply("введено не число")
 
-    # previous_data
-    last_dt = await db.first(db.text("select date from flat order by date desc LIMIT 1"))
-    last_dt = last_dt[0]
-    pd = await Flat.query.where(Flat.date == last_dt).gino.first()
-    alarm_limit = 5
+    previous_data = await state.get_data()
+    input_value = int(message.text)
+
+    if previous_data:
+        previous = previous_data.get("previous_hot")
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=ALERT_LIMIT)
+        if error_message:
+            return await message.reply(error_message)
+
+    async with state.proxy() as data:
+        data["hot"] = input_value
+
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="передать показания", callback_data="save_to_db"))
-    # TODO перенести проверку вводимых показаний на этап их ввода и там же показывать старые данные
-    await message.answer(
-        md.text(
-            md.text("эл. энергия T:", md.code(data["t"]), f"❌ предыдущие {md.code(pd.t)}" if (
-                    data["t"] <= pd.t or (data["t"] - pd.t) > alarm_limit) else "✔️"),
-            md.text("эл. энергия T1:", md.code(data["t1"]), f"❌ предыдущие {md.code(pd.t1)}" if (
-                    data["t1"] <= pd.t1 or (data["t1"] - pd.t1) > alarm_limit) else "✔️"),
-            md.text("эл. энергия T2:", md.code(data["t2"]), f"❌ предыдущие {md.code(pd.t2)}" if (
-                    data["t2"] <= pd.t2 or (data["t2"] - pd.t2) > alarm_limit) else "✔️"),
-            md.text("холодная вода:", md.code(data["cold"]), f"❌ предыдущие {md.code(pd.cold)}" if (
-                    data["cold"] <= pd.cold or (data["cold"] - pd.cold) > alarm_limit) else "✔️"),
-            md.text("горячая вода:", md.code(data["hot"]), f"❌ предыдущие {md.code(pd.hot)}" if (
-                    data["hot"] <= pd.hot or (data["hot"] - pd.hot) > alarm_limit) else "✔️"),
-            sep="\n",
-        ),
-        reply_markup=keyboard,
-        parse_mode=ParseMode.MARKDOWN,
-    )
+
+    text = f"""
+эл. энергия T: {md.code(data["t"])}\nэл. энергия T1: {md.code(data["t1"])}\nэл. энергия T2:{md.code(data["t2"])}
+холодная вода: {md.code(data["cold"])}\nгорячая вода: {md.code(data["hot"])}
+проверка t {"❌" if data["t"] - data["t1"] - data["t2"] > 1 else "✔️"}"""
+
+    await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
     await HomeForm.next()
 
 
