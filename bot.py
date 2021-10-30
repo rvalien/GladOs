@@ -27,6 +27,7 @@ from states import HomeForm
 from keyboards import markup
 from utils import redis_utils, mobile_utils, weather
 from utils.db_api import db_gino
+from utils.db_api.db_gino import db, Flat, User
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -46,52 +47,52 @@ delay = int(os.environ["DELAY"])
 
 bot = Bot(token=telegram_token)
 storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
-dp.middleware.setup(LoggingMiddleware())
+dispatcher = Dispatcher(bot, storage=storage)
+dispatcher.middleware.setup(LoggingMiddleware())
 
 CLIENT = redis.from_url(redis_url)
 
 
-@dp.message_handler(commands=["start"])
+@dispatcher.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
     logging.warning("Starting connection.")
     await types.ChatActions.typing(0.5)
     await message.reply("Hello, i'm GladOS. beep boop...\n", reply_markup=markup)
 
 
-@dp.message_handler(Text(equals="weather"))
+@dispatcher.message_handler(Text(equals="weather"))
 async def weather_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(weather.get_weather(weather_token))
 
 
-@dp.message_handler(commands=["rest"])
+@dispatcher.message_handler(commands=["rest"])
 async def free_time_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
 
 
-@dp.message_handler(commands=["work"])
+@dispatcher.message_handler(commands=["work"])
 async def work_time_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(redis_utils.its_time_to(message, CLIENT, "work"))
 
 
-@dp.message_handler(Text(equals="internet"))
+@dispatcher.message_handler(Text(equals="internet"))
 async def internet_left_worker(message):
     await types.ChatActions.typing(1)
     user = await db_gino.User.get(message.from_user.id)
     await message.reply(mobile_utils.get_internet_limit_text(user))
 
 
-@dp.message_handler(Text(equals="bill"))
+@dispatcher.message_handler(Text(equals="bill"))
 async def get_bill_worker(message):
     await types.ChatActions.typing(1)
     users = await db_gino.User.query.gino.all()
     await message.reply(mobile_utils.get_all_bills_text(users))
 
 
-@dp.message_handler(commands=["log"])
+@dispatcher.message_handler(commands=["log"])
 async def get_free_time_log_worker(message):
     await types.ChatActions.typing(0.5)
 
@@ -100,13 +101,13 @@ async def get_free_time_log_worker(message):
     await message.reply(redis_utils.usage_log(chat_ids, CLIENT))
 
 
-@dp.message_handler(commands=["myid"])
+@dispatcher.message_handler(commands=["myid"])
 async def debug_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(message.from_user)
 
 
-@dp.message_handler(Text(equals="🏡"))
+@dispatcher.message_handler(Text(equals="🏡"))
 async def meter_reading(message: types.Message):
     await types.ChatActions.typing(0.5)
     await HomeForm.t.set()
@@ -120,7 +121,7 @@ async def meter_reading(message: types.Message):
     await message.reply(welcome_message, reply_markup=keyboard)
 
 
-@dp.message_handler(Text(equals="cancel", ignore_case=True), state="*")
+@dispatcher.message_handler(Text(equals="cancel", ignore_case=True), state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -131,7 +132,7 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     await message.reply("ОК", reply_markup=markup)
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t)
+@dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t)
 async def process_t(message: types.Message, state: FSMContext):
     if not message.text.isdigit():
         return await message.reply("введено не число")
@@ -143,41 +144,53 @@ async def process_t(message: types.Message, state: FSMContext):
     await message.reply("чудно, а теперь потребление ⚡T1")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t1)
+@dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t1)
 async def process_t1(message: types.Message, state: FSMContext):
     await HomeForm.next()
     await state.update_data(t1=int(message.text))
     await message.reply("чудно, а теперь потребление ⚡T2")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t2)
+@dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.t2)
 async def process_t2(message: types.Message, state: FSMContext):
     await HomeForm.next()
     await state.update_data(t2=int(message.text))
     await message.reply("славно, а теперь потребление 🥶🌊")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.cold)
+@dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.cold)
 async def process_cold_water(message: types.Message, state: FSMContext):
     await HomeForm.next()
     await state.update_data(cold=int(message.text))
     await message.reply("и наконец, внеси потребление 🥵🌊")
 
 
-@dp.message_handler(lambda message: message.text.isdigit(), state=HomeForm.hot)
+# @dispatcher.message_handler(commands=["test"])
+@dispatcher.message_handler(lambda message: message.text.isdigit(), state=HomeForm.hot)
 async def process_hot_water(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["hot"] = int(message.text)
 
+    # previous_data
+    last_dt = await db.first(db.text("select date from flat order by date desc LIMIT 1"))
+    last_dt = last_dt[0]
+    pd = await Flat.query.where(Flat.date == last_dt).gino.first()
+    alarm_limit = 5
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="передать показания", callback_data="save_to_db"))
+    # TODO перенести проверку вводимых показаний на этап их ввода и там же показывать старые данные
     await message.answer(
         md.text(
-            md.text("электроэнергия T:", md.code(data["t"])),
-            md.text("электроэнергия T1:", md.code(data["t1"])),
-            md.text("электроэнергия T2:", md.code(data["t2"])),
-            md.text("холодная вода:", md.code(data["cold"])),
-            md.text("горячая вода:", md.code(data["hot"])),
+            md.text("эл. энергия T:", md.code(data["t"]), f"❌ предыдущие {md.code(pd.t)}" if (
+                    data["t"] <= pd.t or (data["t"] - pd.t) > alarm_limit) else "✔️"),
+            md.text("эл. энергия T1:", md.code(data["t1"]), f"❌ предыдущие {md.code(pd.t1)}" if (
+                    data["t1"] <= pd.t1 or (data["t1"] - pd.t1) > alarm_limit) else "✔️"),
+            md.text("эл. энергия T2:", md.code(data["t2"]), f"❌ предыдущие {md.code(pd.t2)}" if (
+                    data["t2"] <= pd.t2 or (data["t2"] - pd.t2) > alarm_limit) else "✔️"),
+            md.text("холодная вода:", md.code(data["cold"]), f"❌ предыдущие {md.code(pd.cold)}" if (
+                    data["cold"] <= pd.cold or (data["cold"] - pd.cold) > alarm_limit) else "✔️"),
+            md.text("горячая вода:", md.code(data["hot"]), f"❌ предыдущие {md.code(pd.hot)}" if (
+                    data["hot"] <= pd.hot or (data["hot"] - pd.hot) > alarm_limit) else "✔️"),
             sep="\n",
         ),
         reply_markup=keyboard,
@@ -186,7 +199,7 @@ async def process_hot_water(message: types.Message, state: FSMContext):
     await HomeForm.next()
 
 
-@dp.callback_query_handler(text="save_to_db", state=HomeForm.date)
+@dispatcher.callback_query_handler(text="save_to_db", state=HomeForm.date)
 async def save_to_db(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
@@ -222,7 +235,8 @@ async def on_startup(dispatcher):
     from utils.notify_admins import on_startup_notify
 
     logging.info("connecting to database")
-    await db_gino.on_startup(dp)
+    await db_gino.on_startup(dispatcher)
+    await db.gino.create_all()
     logging.info("Done")
     await on_startup_notify(dispatcher)
     # Запускает таймер для первой игры
@@ -233,4 +247,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     logging.basicConfig(level=logging.INFO)
     # loop.call_later(delay, repeat, some_task, loop)
-    asyncio.run(executor.start_polling(dp, on_startup=on_startup, loop=loop, skip_updates=True))
+    asyncio.run(executor.start_polling(dispatcher, on_startup=on_startup, loop=loop, skip_updates=True))

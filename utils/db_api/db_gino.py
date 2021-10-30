@@ -15,6 +15,9 @@ class User(db.Model):
     phone = db.Column(db.Integer())
     password = db.Column(db.Unicode())
 
+    def __str__(self):
+        return f"user object {self.name}"
+
 
 class Flat(db.Model):
     __tablename__ = 'flat'
@@ -25,6 +28,9 @@ class Flat(db.Model):
     t2 = db.Column(db.Integer())
     hot = db.Column(db.Integer())
     cold = db.Column(db.Integer())
+
+    def __str__(self):
+        return f"flat data object {self.date}"
 
 
 async def on_startup(dispatcher: Dispatcher):
