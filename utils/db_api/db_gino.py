@@ -36,3 +36,5 @@ class Flat(db.Model):
 async def on_startup(dispatcher: Dispatcher):
     logging.info("set bind to PostgreSQL")
     await db.set_bind(os.environ["DATABASE_URL"])
+    logging.info("prepare tables PostgreSQL")
+    await db.gino.create_all()
