@@ -259,8 +259,11 @@ async def process_hot_water(message: types.Message, state: FSMContext):
     keyboard.add(types.InlineKeyboardButton(text="передать показания", callback_data="save_to_db"))
 
     text = f"""
-эл. энергия T: {md.code(data["t"])}\nэл. энергия T1: {md.code(data["t1"])}\nэл. энергия T2:{md.code(data["t2"])}
-холодная вода: {md.code(data["cold"])}\nгорячая вода: {md.code(data["hot"])}
+эл. энергия T: {md.code(data["t"])} diff {md.code(data["t"] - data["previous_t"])}
+эл. энергия T1: {md.code(data["t1"])} diff {md.code(data["t1"] - data["previous_t1"])}
+эл. энергия T2:{md.code(data["t2"])} diff {md.code(data["t2"] - data["previous_t2"])}
+холодная вода: {md.code(data["cold"])} diff {md.code(data["cold"] - data["previous_cold"])}
+горячая вода: {md.code(data["hot"])} diff {md.code(data["hot"] - data["previous_hot"])}
 проверка t {"❌" if data["t"] - data["t1"] - data["t2"] > 1 else "✔️"}"""
 
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -271,7 +274,7 @@ async def process_hot_water(message: types.Message, state: FSMContext):
 async def save_to_db(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
-
+        data = dict(filter(lambda item: not item[0].startswith("previous_"), data.items()))
         flat_data = await Flat.get(data["date"])
         if flat_data:
             await flat_data.update(**data).apply()
