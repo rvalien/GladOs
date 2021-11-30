@@ -1,7 +1,8 @@
 #this file need for heroku build
 
-aiogram>=2.14.3
-redis>=3.5.3
+aiogram>=2.16
+aiohttp>=3.7.4
+redis>=4.0.2
 requests>=2.26.0
 pika>=1.2.0
 gino
