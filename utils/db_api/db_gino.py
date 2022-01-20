@@ -33,6 +33,20 @@ class Flat(db.Model):
         return f"flat data object {self.date}"
 
 
+class BloodPressure(db.Model):
+    __tablename__ = 'blood_pressure'
+
+    date = db.Column(db.Date)
+    am = db.Column(db.Boolean())  # "утреннее измерение"
+    systolic = db.Column(db.Integer())  # "систолическое"
+    diastolic = db.Column(db.Integer)  # "диастолическое"
+
+    _pk = db.PrimaryKeyConstraint('date', 'am', name='date_daypart_pkey')
+
+    def __str__(self):
+        return f"BloodPressure object {self.date}_{int(self.am)}"
+
+
 async def on_startup(dispatcher: Dispatcher):
     logging.info("set bind to PostgreSQL")
     await db.set_bind(os.environ["DATABASE_URL"])

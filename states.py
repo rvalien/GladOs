@@ -16,3 +16,11 @@ class HomeForm(StatesGroup):
     previous_hot = State()
     previous_date = State()
 
+
+class BloodPressureForm(StatesGroup):
+    """Форма для передачи показаний приборов учёта."""
+    date = State()
+    am = State()
+    systolic = State()
+    diastolic = State()
+

@@ -3,7 +3,7 @@ this bot made with ❤️
 """
 
 __author__ = "Valien"
-__version__ = "2021.9.9"
+__version__ = "2022.1"
 __maintainer__ = "Valien"
 __link__ = "https://github.com/rvalien/GladOs"
 
@@ -22,11 +22,12 @@ from aiogram.dispatcher import FSMContext, Dispatcher
 from aiogram.dispatcher.filters import Text
 from aiogram.types import ParseMode
 from aiogram.utils import executor, markdown as md
-from states import HomeForm
+from states import HomeForm, BloodPressureForm
+from asyncpg.exceptions import UniqueViolationError
 
 from keyboards import markup
 from utils import redis_utils, mobile_utils, weather
-from utils.db_api.db_gino import db, Flat, User, on_startup as gino_on_startup
+from utils.db_api.db_gino import db, Flat, User, BloodPressure, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -69,6 +70,66 @@ async def weather_worker(message):
 async def free_time_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
+
+
+@dispatcher.callback_query_handler(text="save_to_db2", state=BloodPressureForm.systolic)
+async def save_to_db2(call: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        try:
+            await BloodPressure.create(**data)
+        except UniqueViolationError as e:
+            await call.answer(f"показания уже есть на утро / вечер этого дня: {e}")
+        else:
+            await call.answer(text="записал")
+    await call.message.answer("умница", reply_markup=markup)
+    await state.finish()
+
+
+@dispatcher.callback_query_handler(text="cancle_h", state=BloodPressureForm.systolic)
+async def cancle_h(call: types.CallbackQuery, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    await state.finish()
+    await call.message.answer("ОК", reply_markup=markup)
+
+
+@dispatcher.message_handler(Text(equals="❤️"))
+async def process_health_worker(message: types.Message, state: FSMContext):
+    await types.ChatActions.typing(0.5)
+    await BloodPressureForm.date.set()
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["cancel"]
+    keyboard.add(*buttons)
+    async with state.proxy() as data:
+        data["date"] = datetime.datetime.now().date()
+        data["am"] = datetime.datetime.now().time().hour < 12
+
+    await message.reply("введите давление через пробел", reply_markup=keyboard)
+
+
+@dispatcher.message_handler(state=BloodPressureForm.date)
+async def process_bp(message: types.Message, state: FSMContext):
+    input_value = message.text
+    systolic, diastolic = input_value.split(" ")
+
+    async with state.proxy() as data:
+        data["systolic"] = int(systolic)
+        data["diastolic"] = int(diastolic)
+
+    logging.info(data)
+    await BloodPressureForm.next()
+
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_to_db2"))
+    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancle_h"))
+    text = f""" {data["date"]} {"🌅" if data["am"] else "😴"}
+    давление систолическое: {md.code(data["systolic"])}
+    давление. диастолическое: {md.code(data["diastolic"])}
+"""
+    await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
+    await BloodPressureForm.next()
 
 
 @dispatcher.message_handler(commands=["work"])
