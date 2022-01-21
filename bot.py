@@ -34,6 +34,7 @@ telegram_token = os.environ["TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
+bp_user = os.environ['BP_USER']
 
 # # mqtt
 # url = os.environ.get("CLOUDAMQP_URL")
@@ -339,7 +340,6 @@ async def save_to_db(call: types.CallbackQuery, state: FSMContext):
             await Flat.create(**data)
 
     await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved", reply_markup=markup)
-    # await call.answer(text="Спасибо, что воспользовались ботом!")
     await state.finish()
 
 
@@ -352,6 +352,20 @@ async def scheduler():
     while True:
         await schedule.run_pending()
         await asyncio.sleep(1)
+
+
+async def check_bp():
+    if bp_user:
+        current_hour = datetime.datetime.now().hour
+        if 10 <= current_hour <= 12 or 21 <= current_hour <= 23:
+            date = datetime.datetime.now().date()
+            am = datetime.datetime.now().time().hour < 12
+            some_object = await BloodPressure.get((date, am))
+            if some_object is None:
+                await bot.send_message(bp_user, f"ёба, а чё, a где?", reply_markup=markup)
+            else:
+                logging.info(f"we have object: {some_object}")
+        logging.info(f"Skip check_bp. Reason: current hour {current_hour}")
 
 
 async def on_startup(dispatcher):
@@ -372,5 +386,5 @@ async def on_startup(dispatcher):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     logging.basicConfig(level=logging.INFO)
-    # loop.call_later(delay, repeat, some_task, loop)
+    loop.call_later(delay, repeat, check_bp, loop)
     asyncio.run(executor.start_polling(dispatcher, on_startup=on_startup, loop=loop, skip_updates=True))
