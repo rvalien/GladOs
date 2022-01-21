@@ -37,8 +37,8 @@ class BloodPressure(db.Model):
     __tablename__ = 'blood_pressure'
 
     date = db.Column(db.Date)
-    am = db.Column(db.Boolean())  # "утреннее измерение"
-    systolic = db.Column(db.Integer())  # "систолическое"
+    am = db.Column(db.Boolean)  # "утреннее измерение"
+    systolic = db.Column(db.Integer)  # "систолическое"
     diastolic = db.Column(db.Integer)  # "диастолическое"
 
     _pk = db.PrimaryKeyConstraint('date', 'am', name='date_daypart_pkey')

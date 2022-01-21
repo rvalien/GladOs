@@ -1,5 +1,5 @@
 """
-this bot made with ❤️
+This bot made with ❤️
 """
 
 __author__ = "Valien"
@@ -72,26 +72,25 @@ async def free_time_worker(message):
     await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
 
 
-@dispatcher.callback_query_handler(text="save_to_db2", state=BloodPressureForm.systolic)
-async def save_to_db2(call: types.CallbackQuery, state: FSMContext):
+@dispatcher.callback_query_handler(text="save_bp_to_db", state=BloodPressureForm.systolic)
+async def save_bp_to_db(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         try:
             await BloodPressure.create(**data)
-        except UniqueViolationError as e:
-            await call.answer(f"показания уже есть на утро / вечер этого дня: {e}")
+        except UniqueViolationError:
+            await call.answer(f'Уже есть показания на {"утро" if data.get("am") else "вечер"} этого дня.')
         else:
-            await call.answer(text="записал")
-    await call.message.answer("умница", reply_markup=markup)
+            await call.answer(text="Записал.")
     await state.finish()
 
 
-@dispatcher.callback_query_handler(text="cancle_h", state=BloodPressureForm.systolic)
-async def cancle_h(call: types.CallbackQuery, state: FSMContext):
+@dispatcher.callback_query_handler(text="bp_cancel", state=BloodPressureForm.systolic)
+async def bp_cancel(call: types.CallbackQuery, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
     await state.finish()
-    await call.message.answer("ОК", reply_markup=markup)
+    await call.answer("отменено и забыто")
 
 
 @dispatcher.message_handler(Text(equals="❤️"))
@@ -99,14 +98,11 @@ async def process_health_worker(message: types.Message, state: FSMContext):
     await types.ChatActions.typing(0.5)
     await BloodPressureForm.date.set()
 
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["cancel"]
-    keyboard.add(*buttons)
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
         data["am"] = datetime.datetime.now().time().hour < 12
 
-    await message.reply("введите давление через пробел", reply_markup=keyboard)
+    await message.reply("введите показания давление через пробел", reply_markup=markup)
 
 
 @dispatcher.message_handler(state=BloodPressureForm.date)
@@ -122,11 +118,11 @@ async def process_bp(message: types.Message, state: FSMContext):
     await BloodPressureForm.next()
 
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_to_db2"))
-    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancle_h"))
-    text = f""" {data["date"]} {"🌅" if data["am"] else "😴"}
-    давление систолическое: {md.code(data["systolic"])}
-    давление. диастолическое: {md.code(data["diastolic"])}
+    keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_bp_to_db"))
+    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="bp_cancel"))
+    text = f"""{data["date"]} {"🌅" if data["am"] else "😴"}
+давление систолическое: {md.code(data["systolic"])}
+давление диастолическое: {md.code(data["diastolic"])}
 """
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
     await BloodPressureForm.next()
