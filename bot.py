@@ -357,7 +357,7 @@ async def scheduler():
 async def check_bp():
     if bp_user:
         current_hour = datetime.datetime.now().hour
-        if 10 <= current_hour <= 12 or 21 <= current_hour <= 23:
+        if 10 <= current_hour < 12 or 21 <= current_hour <= 23:
             date = datetime.datetime.now().date()
             am = datetime.datetime.now().time().hour < 12
             some_object = await BloodPressure.get((date, am))
