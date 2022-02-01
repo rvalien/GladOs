@@ -15,8 +15,8 @@ gino = "^1.0.1"
 aioschedule = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^3.9.2"
-black = "^21.6b0"
+flake8 = "^4.0.1"
+black = "^22.1.0"
 jupyter = "^1.0.0"
 notebook = "^6.4.0"
 
