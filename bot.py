@@ -74,7 +74,7 @@ async def free_time_worker(message):
     await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
 
 
-@dispatcher.callback_query_handler(text="save_health_to_db", state=HealthForm.diastolic)
+@dispatcher.callback_query_handler(text="save_health_to_db", state=HealthForm.weight)
 async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         try:
@@ -86,7 +86,7 @@ async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
     await state.finish()
 
 
-@dispatcher.callback_query_handler(text="health_cancel", state=HealthForm.diastolic)
+@dispatcher.callback_query_handler(text="health_cancel", state=HealthForm.weight)
 async def health_cancel(call: types.CallbackQuery, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -114,7 +114,7 @@ async def process_health(message: types.Message, state: FSMContext):
         data["systolic"] = int(systolic)
         data["diastolic"] = int(diastolic)
         data["weight"] = float(weight.replace(",", "."))
-    await HealthForm.next()
+    await HealthForm.last()
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
@@ -125,7 +125,6 @@ async def process_health(message: types.Message, state: FSMContext):
 вес: {md.code(data["weight"])}
 """
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
-    await HealthForm.next()
 
 
 @dispatcher.message_handler(commands=["work"])
