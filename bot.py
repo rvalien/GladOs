@@ -80,8 +80,9 @@ async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
         try:
             await Health.create(**data)
         except UniqueViolationError:
-            await call.answer("Уже есть показания этого дня")
-            #     TODO добавить обновление
+            await call.answer("Уже есть показания этого дня. Обновил.")
+            obj = await Health.get(date=data["date"])
+            await obj.update(**data).apply()
         await call.answer(text="Записал.")
     await state.finish()
 
