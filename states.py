@@ -23,4 +23,5 @@ class BloodPressureForm(StatesGroup):
     am = State()
     systolic = State()
     diastolic = State()
+    weight = State()
 

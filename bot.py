@@ -3,7 +3,7 @@ This bot made with ❤️
 """
 
 __author__ = "Valien"
-__version__ = "2022.1"
+__version__ = "2022.2"
 __maintainer__ = "Valien"
 __link__ = "https://github.com/rvalien/GladOs"
 
@@ -34,7 +34,7 @@ telegram_token = os.environ["TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
-bp_user = os.environ['BP_USER']
+bp_user = os.environ["BP_USER"]
 
 # # mqtt
 # url = os.environ.get("CLOUDAMQP_URL")
@@ -79,7 +79,7 @@ async def save_bp_to_db(call: types.CallbackQuery, state: FSMContext):
         try:
             await BloodPressure.create(**data)
         except UniqueViolationError:
-            await call.answer(f'Уже есть показания на {"утро" if data.get("am") else "вечер"} этого дня.')
+            await call.answer(f'Уже есть показания этого дня.')
         else:
             await call.answer(text="Записал.")
     await state.finish()
@@ -103,17 +103,18 @@ async def process_health_worker(message: types.Message, state: FSMContext):
         data["date"] = datetime.datetime.now().date()
         data["am"] = datetime.datetime.now().time().hour < 12
 
-    await message.reply("введите показания давление через пробел", reply_markup=markup)
+    await message.reply("введите показания через пробел\n`систолическое` `диастолическое` `вес`", reply_markup=markup)
 
 
 @dispatcher.message_handler(state=BloodPressureForm.date)
 async def process_bp(message: types.Message, state: FSMContext):
     input_value = message.text
-    systolic, diastolic = input_value.split(" ")
+    systolic, diastolic, weight = input_value.split(" ")
 
     async with state.proxy() as data:
         data["systolic"] = int(systolic)
         data["diastolic"] = int(diastolic)
+        data["weight"] = float(weight)
 
     logging.info(data)
     await BloodPressureForm.next()
@@ -124,6 +125,7 @@ async def process_bp(message: types.Message, state: FSMContext):
     text = f"""{data["date"]} {"🌅" if data["am"] else "😴"}
 давление систолическое: {md.code(data["systolic"])}
 давление диастолическое: {md.code(data["diastolic"])}
+вес: {md.code(data["weight"])}
 """
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
     await BloodPressureForm.next()
@@ -357,10 +359,9 @@ async def scheduler():
 async def check_bp():
     if bp_user:
         current_hour = datetime.datetime.now().hour
-        if 10 <= current_hour < 12 or 21 <= current_hour <= 23:
+        if 10 <= current_hour < 12:
             date = datetime.datetime.now().date()
-            am = datetime.datetime.now().time().hour < 12
-            some_object = await BloodPressure.get((date, am))
+            some_object = await BloodPressure.get(date)
             if some_object is None:
                 await bot.send_message(bp_user, f"ёба, а чё, a где?", reply_markup=markup)
             else:
