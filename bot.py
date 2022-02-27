@@ -30,7 +30,8 @@ from utils import redis_utils, mobile_utils, weather
 from utils.db_api.db_gino import db, Flat, User, BloodPressure, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
-telegram_token = os.environ["TELEGRAM_TOKEN"]
+# telegram_token = os.environ["TELEGRAM_TOKEN"]
+telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
@@ -103,7 +104,9 @@ async def process_health_worker(message: types.Message, state: FSMContext):
         data["date"] = datetime.datetime.now().date()
         data["am"] = datetime.datetime.now().time().hour < 12
 
-    await message.reply("введите показания через пробел\n`систолическое` `диастолическое` `вес`", reply_markup=markup)
+    await message.reply(
+        "введите показания через пробел\n**систолическое** **диастолическое** **вес**", reply_markup=markup
+    )
 
 
 @dispatcher.message_handler(state=BloodPressureForm.date)
@@ -114,7 +117,7 @@ async def process_bp(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data["systolic"] = int(systolic)
         data["diastolic"] = int(diastolic)
-        data["weight"] = float(weight)
+        data["weight"] = float(weight.replace(",", "."))
 
     logging.info(data)
     await BloodPressureForm.next()
