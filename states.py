@@ -17,7 +17,7 @@ class HomeForm(StatesGroup):
     previous_date = State()
 
 
-class BloodPressureForm(StatesGroup):
+class HealthForm(StatesGroup):
     """Форма для передачи показаний приборов учёта."""
     date = State()
     systolic = State()

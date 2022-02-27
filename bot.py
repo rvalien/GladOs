@@ -22,12 +22,12 @@ from aiogram.dispatcher import FSMContext, Dispatcher
 from aiogram.dispatcher.filters import Text
 from aiogram.types import ParseMode
 from aiogram.utils import executor, markdown as md
-from states import HomeForm, BloodPressureForm
+from states import HomeForm, HealthForm
 from asyncpg.exceptions import UniqueViolationError
 
 from keyboards import markup
 from utils import redis_utils, mobile_utils, weather
-from utils.db_api.db_gino import db, Flat, User, BloodPressure, on_startup as gino_on_startup
+from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -74,20 +74,20 @@ async def free_time_worker(message):
     await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
 
 
-@dispatcher.callback_query_handler(text="save_bp_to_db", state=BloodPressureForm.systolic)
-async def save_bp_to_db(call: types.CallbackQuery, state: FSMContext):
+@dispatcher.callback_query_handler(text="save_health_to_db", state=HealthForm.diastolic)
+async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         try:
-            await BloodPressure.create(**data)
+            await Health.create(**data)
         except UniqueViolationError:
-            await call.answer(f'Уже есть показания этого дня.')
-        else:
-            await call.answer(text="Записал.")
+            await call.answer("Уже есть показания этого дня")
+            #     TODO добавить обновление
+        await call.answer(text="Записал.")
     await state.finish()
 
 
-@dispatcher.callback_query_handler(text="bp_cancel", state=BloodPressureForm.systolic)
-async def bp_cancel(call: types.CallbackQuery, state: FSMContext):
+@dispatcher.callback_query_handler(text="health_cancel", state=HealthForm.diastolic)
+async def health_cancel(call: types.CallbackQuery, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
@@ -98,15 +98,15 @@ async def bp_cancel(call: types.CallbackQuery, state: FSMContext):
 @dispatcher.message_handler(Text(equals="❤️"))
 async def process_health_worker(message: types.Message, state: FSMContext):
     await types.ChatActions.typing(0.5)
-    await BloodPressureForm.date.set()
+    await HealthForm.date.set()
 
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
     await message.reply("введите показания через пробел\nсистолическое диастолическое вес", reply_markup=markup)
 
 
-@dispatcher.message_handler(state=BloodPressureForm.date)
-async def process_bp(message: types.Message, state: FSMContext):
+@dispatcher.message_handler(state=HealthForm.date)
+async def process_health(message: types.Message, state: FSMContext):
     input_value = message.text
     systolic, diastolic, weight = input_value.split(" ")
 
@@ -114,20 +114,18 @@ async def process_bp(message: types.Message, state: FSMContext):
         data["systolic"] = int(systolic)
         data["diastolic"] = int(diastolic)
         data["weight"] = float(weight.replace(",", "."))
-
-    logging.info(data)
-    await BloodPressureForm.next()
+    await HealthForm.next()
 
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_bp_to_db"))
-    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="bp_cancel"))
-    text = f"""{data["date"]} {"🌅" if data["am"] else "😴"}
+    keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
+    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="health_cancel"))
+    text = f"""{data["date"]}
 давление систолическое: {md.code(data["systolic"])}
 давление диастолическое: {md.code(data["diastolic"])}
 вес: {md.code(data["weight"])}
 """
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
-    await BloodPressureForm.next()
+    await HealthForm.next()
 
 
 @dispatcher.message_handler(commands=["work"])
@@ -355,14 +353,14 @@ async def scheduler():
         await asyncio.sleep(1)
 
 
-async def check_bp():
+async def check_health():
     if bp_user:
         current_hour = datetime.datetime.now().hour
         if 10 <= current_hour < 12:
             date = datetime.datetime.now().date()
-            some_object = await BloodPressure.get(date)
+            some_object = await Health.get(date)
             if some_object is None:
-                await bot.send_message(bp_user, f"ёба, а чё, a где?", reply_markup=markup)
+                await bot.send_message(bp_user, "ёба, а чё, a где?", reply_markup=markup)
             else:
                 logging.info(f"we have object: {some_object}")
         logging.info(f"Skip check_bp. Reason: current hour {current_hour}")
@@ -373,11 +371,10 @@ async def on_startup(dispatcher):
     # import middlewares
     # filters.setup(dp)
     # middlewares.setup(dp)
-
-    from utils.notify_admins import on_startup_notify
+    # from utils.notify_admins import on_startup_notify
 
     await gino_on_startup(dispatcher)
-    await on_startup_notify(dispatcher)
+    # await on_startup_notify(dispatcher)
     # Запускает таймер для первой игры
     asyncio.create_task(scheduler())
     logging.info("Done")
@@ -386,5 +383,5 @@ async def on_startup(dispatcher):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     logging.basicConfig(level=logging.INFO)
-    loop.call_later(delay, repeat, check_bp, loop)
+    loop.call_later(delay, repeat, check_health, loop)
     asyncio.run(executor.start_polling(dispatcher, on_startup=on_startup, loop=loop, skip_updates=True))

@@ -33,18 +33,16 @@ class Flat(db.Model):
         return f"flat data object {self.date}"
 
 
-class BloodPressure(db.Model):
-    __tablename__ = 'blood_pressure'
+class Health(db.Model):
+    __tablename__ = 'health'
 
     date = db.Column(db.Date)
     systolic = db.Column(db.Integer)  # "систолическое"
     diastolic = db.Column(db.Integer)  # "диастолическое"
     weight = db.Column(db.Float)  # "диастолическое"
 
-    _pk = db.PrimaryKeyConstraint('date', name='date_pkey')
-
     def __str__(self):
-        return f"health object {self.date}"
+        return f"health object"
 
 
 async def on_startup(dispatcher: Dispatcher):
