@@ -20,7 +20,6 @@ class HomeForm(StatesGroup):
 class BloodPressureForm(StatesGroup):
     """Форма для передачи показаний приборов учёта."""
     date = State()
-    am = State()
     systolic = State()
     diastolic = State()
     weight = State()

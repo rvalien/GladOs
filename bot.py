@@ -102,11 +102,7 @@ async def process_health_worker(message: types.Message, state: FSMContext):
 
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
-        data["am"] = datetime.datetime.now().time().hour < 12
-
-    await message.reply(
-        "введите показания через пробел\n**систолическое** **диастолическое** **вес**", reply_markup=markup
-    )
+    await message.reply("введите показания через пробел\nсистолическое диастолическое вес", reply_markup=markup)
 
 
 @dispatcher.message_handler(state=BloodPressureForm.date)

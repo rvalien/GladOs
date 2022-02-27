@@ -37,14 +37,14 @@ class BloodPressure(db.Model):
     __tablename__ = 'blood_pressure'
 
     date = db.Column(db.Date)
-    am = db.Column(db.Boolean)  # "утреннее измерение"
     systolic = db.Column(db.Integer)  # "систолическое"
     diastolic = db.Column(db.Integer)  # "диастолическое"
+    weight = db.Column(db.Float)  # "диастолическое"
 
-    _pk = db.PrimaryKeyConstraint('date', 'am', name='date_daypart_pkey')
+    _pk = db.PrimaryKeyConstraint('date', name='date_pkey')
 
     def __str__(self):
-        return f"BloodPressure object {self.date}_{int(self.am)}"
+        return f"health object {self.date}"
 
 
 async def on_startup(dispatcher: Dispatcher):
