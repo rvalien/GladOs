@@ -86,13 +86,14 @@ async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
     await state.finish()
 
 
-@dispatcher.callback_query_handler(text="health_cancel", state=HealthForm.weight)
-async def health_cancel(call: types.CallbackQuery, state: FSMContext):
+@dispatcher.message_handler(Text(equals="cancel", ignore_case=True), state="*")
+async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
+    logging.info('Cancelling state %r', current_state)
     await state.finish()
-    await call.answer("отменено и забыто")
+    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dispatcher.message_handler(Text(equals="❤️"))
@@ -118,7 +119,7 @@ async def process_health(message: types.Message, state: FSMContext):
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
-    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="health_cancel"))
+    keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancel_handler"))
     text = f"""{data["date"]}
 давление систолическое: {md.code(data["systolic"])}
 давление диастолическое: {md.code(data["diastolic"])}
@@ -145,15 +146,6 @@ async def get_bill_worker(message):
     await types.ChatActions.typing(1)
     users = await User.query.gino.all()
     await message.reply(mobile_utils.get_all_bills_text(users))
-
-
-@dispatcher.message_handler(commands=["log"])
-async def get_free_time_log_worker(message):
-    await types.ChatActions.typing(0.5)
-
-    users = await User.query.gino.all()
-    chat_ids = list(map(lambda x: x.chat_id, users))
-    await message.reply(redis_utils.usage_log(chat_ids, CLIENT))
 
 
 @dispatcher.message_handler(commands=["myid"])
@@ -192,17 +184,6 @@ async def meter_reading(message: types.Message, state: FSMContext):
         data["previous_date"] = previous_data.date
 
     await message.reply(welcome_message, reply_markup=keyboard)
-
-
-@dispatcher.message_handler(Text(equals="cancel", ignore_case=True), state="*")
-async def cancel_handler(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-
-    await state.finish()
-    await types.ChatActions.typing(0.5)
-    await message.reply("ОК", reply_markup=markup)
 
 
 def make_compare_error_message(current: int, previous: int, alarm_value: int = None) -> str:
@@ -374,9 +355,7 @@ async def on_startup(dispatcher):
 
     await gino_on_startup(dispatcher)
     # await on_startup_notify(dispatcher)
-    # Запускает таймер для первой игры
     asyncio.create_task(scheduler())
-    logging.info("Done")
 
 
 if __name__ == "__main__":
