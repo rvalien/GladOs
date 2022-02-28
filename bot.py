@@ -30,8 +30,8 @@ from utils import redis_utils, mobile_utils, weather
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
-# telegram_token = os.environ["TELEGRAM_TOKEN"]
-telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
+telegram_token = os.environ["TELEGRAM_TOKEN"]
+# telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
