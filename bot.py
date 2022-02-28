@@ -30,8 +30,8 @@ from utils import redis_utils, mobile_utils, weather
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
-telegram_token = os.environ["TELEGRAM_TOKEN"]
-# telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
+# telegram_token = os.environ["TELEGRAM_TOKEN"]
+telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
@@ -81,7 +81,7 @@ async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
             await Health.create(**data)
         except UniqueViolationError:
             await call.answer("Уже есть показания этого дня. Обновил.")
-            obj = await Health.get(date=data["date"])
+            obj = await Health.get(data["date"])
             await obj.update(**data).apply()
         await call.answer(text="Записал.")
     await state.finish()

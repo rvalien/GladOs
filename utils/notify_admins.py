@@ -14,3 +14,7 @@ async def on_startup_notify(dp: Dispatcher):
 
     except Exception as err:
         logging.exception(err)
+
+
+if __name__ == '__main__':
+    pass

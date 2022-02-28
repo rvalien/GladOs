@@ -36,7 +36,7 @@ class Flat(db.Model):
 class Health(db.Model):
     __tablename__ = 'health'
 
-    date = db.Column(db.Date)
+    date = db.Column(db.Date, primary_key=True)
     systolic = db.Column(db.Integer)  # "систолическое"
     diastolic = db.Column(db.Integer)  # "диастолическое"
     weight = db.Column(db.Float)  # "диастолическое"
