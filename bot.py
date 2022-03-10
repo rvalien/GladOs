@@ -336,15 +336,15 @@ async def scheduler():
 
 async def check_health():
     if bp_user:
-        current_hour = datetime.datetime.now().hour
-        if 10 <= current_hour < 12:
+        current_dt = datetime.datetime.now()
+        # every three days in morning
+        if current_dt.day % 3 == 0 and 10 <= current_dt.hour < 12:
             date = datetime.datetime.now().date()
             some_object = await Health.get(date)
             if some_object is None:
                 await bot.send_message(bp_user, "ёба, а чё, a где?", reply_markup=markup)
             else:
                 logging.info(f"we have object: {some_object}")
-        logging.info(f"Skip check_bp. Reason: current hour {current_hour}")
 
 
 async def on_startup(dispatcher):
