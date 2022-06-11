@@ -1,24 +1,18 @@
 [tool.poetry]
 name = "glados"
-version = "0.1.2"
-description = ""
-authors = ["valien <valien.r@gmail.com>"]
+version = "0.1.0"
+description = "my personal rutine helper"
+authors = ["Valien R. <34721834+rvalien@users.noreply.github.com>"]
+license = "MIT License"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-redis = "^4.1.1"
-psycopg2 = "2.9.1"
-aiogram = "^2.13"
-requests = "^2.25.1"
-pika = "^1.2.0"
-gino = "^1.0.1"
+python = "3.10.5"
+aiogram = "^2.20"
+asyncpg = "^0.25.0"
 aioschedule = "^0.5.2"
+gino = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^4.0.1"
-black = "^22.1.0"
-jupyter = "^1.0.0"
-notebook = "^6.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

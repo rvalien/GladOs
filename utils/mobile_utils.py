@@ -1,75 +1,98 @@
+import json
 import os
-import requests
-import logging
+from datetime import datetime
+from typing import NamedTuple
+
+import aiohttp
+from utils.db_api.db_gino import User
+
+from exceptions import CantGetPhoneData
 
 mobile_lk_url = os.environ["MOBILE_LK_URL"]
 
+Bytes = int
 
-# TODO кровь из глаз - переписать
-def get_mobile_data(login: str, password: str) -> dict:
-    """
 
-    :param login:
-    :param password:
-    :return:
+class PhoneData(NamedTuple):
+    ctn: str
+    plan: str
+    balance: float
+    effectiveBalance: float
+    blcokDate: datetime.date
+    unblockable: bool
+    rest_voice_initial: int
+    rest_voice_current: int
+    rest_voice_used: int
+    rest_sms_initial: int
+    rest_sms_current: int
+    rest_sms_used: int
+    rest_internet_initial: Bytes
+    rest_internet_current: Bytes
+    rest_internet_used: Bytes
+
+
+async def get_mobile_data(user: User) -> PhoneData:
     """
-    url = mobile_lk_url
-    header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0"}
-    payload = {"phone": str(login), "pass": str(password)}
-    a, b, i = 0, 0, 0
-    with requests.Session() as s:
-        # we need while because provider returns zeroes sometimes
-        while a == 0 and b == 0:
-            r = s.post(url, data=payload, headers=header)
-            if r.status_code != 200:
-                return {"error": f"ошибка авторизации {r.status_code} {r.text}"}
+    :param user:
+    :return: PhoneData
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url=mobile_lk_url, data={"phone": user.phone, "pass": user.password}) as response:
+            raw_response = await response.text()
+
+            if response.status == 200:
+                raw_response = json.loads(raw_response).get("customers", [])[0].get("ctnInfo")
+                raw_response["blcokDate"] = datetime.strptime(raw_response["blcokDate"], "%Y-%m-%d").date()
+                return PhoneData(**raw_response)
             else:
-                foo = r.json()["customers"]
-                if len(foo) != 1:
-                    logging.warning(f"error: {foo=}, {len(foo)=}")
-                else:
-                    foo = foo[0]
-                    a, b = foo["ctnInfo"]["balance"], foo["ctnInfo"]["rest_internet_current"]
-                i += 1
-        return foo["ctnInfo"]
+                raise CantGetPhoneData(raw_response)
 
 
-def print_mobile_info(data: dict) -> str:
+def print_mobile_info(data: PhoneData) -> str:
     """
-
     :param data: data from
     :return: short string
+
+    example:
+        Осталось 19.58 Gb. Баланс: 1.49 р.
     """
-    internet = int(data["rest_internet_current"])
-
-    if internet >= 1024:
-        i = "Gb"
-        internet = round(internet / 1024, 2)
-    else:
-        i = "Mb"
-
-    balance = data["balance"] if int(data["balance"]) != int(data["effectiveBalance"]) else data["effectiveBalance"]
-    return f"Осталось {internet} {i}. Баланс: {balance} р."
+    gb = 1024
+    val = data.rest_internet_current if data.rest_internet_current <= gb else round(data.rest_internet_current / gb, 2)
+    i = "Mb" if data.rest_internet_current <= gb else "Gb"
+    return f"Осталось {val} {i}. Баланс: {data.balance} р."
 
 
-def get_all_mobile_bills(all_users):
-    result = dict()
+async def get_all_mobile_bills(all_users: list[User, ...]) -> dict[str, PhoneData]:
+    result = {}
     for user in all_users:
-        result[user.name] = get_mobile_data(login=user.phone, password=user.password)
+        user_data = await get_mobile_data(user)
+        result[user.name] = user_data
     return result
 
 
-def prepare_response_text(data: dict) -> str:
-    temp_list = list()
-    for key in data.keys():
-        temp = f'{key}: {data[key].get("effectiveBalance") if data[key].get("effectiveBalance") else data[key].get("balance")}'
+def prepare_response_text(data: dict[str, PhoneData]) -> str:
+    """
+    example:
+        Username0: 1.49
+        Username1: 1.5
+        username2: 2363.72
+        modem: -2.63
+    """
+    temp_list = []
+    for key, phone_data in data.items():
+        temp = f"{key}: {phone_data.balance} р."
         temp_list.append(temp)
     return "\n".join(temp_list)
 
 
-def get_internet_limit_text(user):
-    return print_mobile_info(get_mobile_data(user.phone, user.password))
+async def get_internet_limit_text(user: User) -> str:
+    """`internet` Action function, to get user's internet data."""
+    data = await get_mobile_data(user)
+    return print_mobile_info(data)
 
 
-def get_all_bills_text(users):
-    return prepare_response_text(get_all_mobile_bills(users))
+async def get_all_bills_text(users: list[User]):
+    """`bill` Action function, to get all balances."""
+
+    data = await get_all_mobile_bills(users)
+    return prepare_response_text(data)

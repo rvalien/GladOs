@@ -2,8 +2,6 @@
 
 aiogram>=2.16
 aiohttp>=3.7.4
-redis>=4.0.2
-requests>=2.26.0
 pika>=1.2.0
 gino
 aioschedule>=0.5.2

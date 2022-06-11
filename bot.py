@@ -3,7 +3,7 @@ This bot made with ❤️
 """
 
 __author__ = "Valien"
-__version__ = "2022.2"
+__version__ = "2022.2.1"
 __maintainer__ = "Valien"
 __link__ = "https://github.com/rvalien/GladOs"
 
@@ -12,9 +12,7 @@ import asyncio
 import datetime
 import logging
 import os
-import redis
 
-# import pika
 from aiogram import Bot, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -26,7 +24,7 @@ from states import HomeForm, HealthForm
 from asyncpg.exceptions import UniqueViolationError
 
 from keyboards import markup
-from utils import redis_utils, mobile_utils, weather
+from utils import mobile_utils, weather
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 redis_url = os.getenv("REDISTOGO_URL", "redis://localhost:6379")
@@ -52,8 +50,6 @@ storage = MemoryStorage()
 dispatcher = Dispatcher(bot, storage=storage)
 dispatcher.middleware.setup(LoggingMiddleware())
 
-CLIENT = redis.from_url(redis_url)
-
 
 @dispatcher.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
@@ -65,13 +61,7 @@ async def send_welcome(message: types.Message):
 @dispatcher.message_handler(Text(equals="weather"))
 async def weather_worker(message):
     await types.ChatActions.typing(0.5)
-    await message.reply(weather.get_weather(weather_token))
-
-
-@dispatcher.message_handler(commands=["rest"])
-async def free_time_worker(message):
-    await types.ChatActions.typing(0.5)
-    await message.reply(redis_utils.its_time_to(message, CLIENT, "rest"))
+    await message.reply(await weather.get_weather(weather_token))
 
 
 @dispatcher.callback_query_handler(text="save_health_to_db", state=HealthForm.weight)
@@ -87,14 +77,14 @@ async def save_health_to_db(call: types.CallbackQuery, state: FSMContext):
     await state.finish()
 
 
-@dispatcher.message_handler(Text(equals="cancel", ignore_case=True), state="*")
+@dispatcher.message_handler(Text(equals=["cancel", "отмена"], ignore_case=True), state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
-    logging.info('Cancelling state %r', current_state)
+    logging.info("Cancelling state %r", current_state)
     await state.finish()
-    await message.reply('Cancelled.', reply_markup=types.ReplyKeyboardRemove())
+    await message.reply("Cancelled.", reply_markup=types.ReplyKeyboardRemove())
 
 
 @dispatcher.message_handler(Text(equals="❤️"))
@@ -104,7 +94,11 @@ async def process_health_worker(message: types.Message, state: FSMContext):
 
     async with state.proxy() as data:
         data["date"] = datetime.datetime.now().date()
-    await message.reply("введите показания через пробел\nсистолическое диастолическое вес", reply_markup=markup)
+    await message.reply(
+        "введите показания через пробел\n*систолическое* *диастолическое* *вес*\n или `cancel` для отмены.",
+        reply_markup=markup,
+        parse_mode=ParseMode.MARKDOWN,
+    )
 
 
 @dispatcher.message_handler(state=HealthForm.date)
@@ -129,30 +123,18 @@ async def process_health(message: types.Message, state: FSMContext):
     await message.answer(md.text(text), reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
 
 
-@dispatcher.message_handler(commands=["work"])
-async def work_time_worker(message):
-    await types.ChatActions.typing(0.5)
-    await message.reply(redis_utils.its_time_to(message, CLIENT, "work"))
-
-
 @dispatcher.message_handler(Text(equals="internet"))
 async def internet_left_worker(message):
     await types.ChatActions.typing(1)
     user = await User.get(message.from_user.id)
-    await message.reply(mobile_utils.get_internet_limit_text(user))
+    await message.reply(await mobile_utils.get_internet_limit_text(user))
 
 
 @dispatcher.message_handler(Text(equals="bill"))
 async def get_bill_worker(message):
     await types.ChatActions.typing(1)
     users = await User.query.gino.all()
-    await message.reply(mobile_utils.get_all_bills_text(users))
-
-
-@dispatcher.message_handler(commands=["myid"])
-async def debug_worker(message):
-    await types.ChatActions.typing(0.5)
-    await message.reply(message.from_user)
+    await message.reply(await mobile_utils.get_all_bills_text(users))
 
 
 @dispatcher.message_handler(Text(equals="🏡"))
