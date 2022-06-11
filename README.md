@@ -12,15 +12,6 @@ Create for experiments. Now it helps me with routine.
 
 ### bot's commands: 
 
-### /time  
-can help you to choose what to do in your free time.  
-#### Usage:
-`/time` - fetch random element from your todo list if list is not empty.  
-`/time game1` - add 1 element `game1` to your todo list.  
-`/time reading, sleep, bath` - add multiple elements to your todo list.  
-`/time all` - show all your opportunities in list.  
-`/time clean` - clean up your list.
-
 
 ### /bill  
 I don't think that you need it. It's specified for small virtual operator.
@@ -37,12 +28,11 @@ Weather in my hometown.
 `/weather` - example:  21.4C, ясно
 
 
-### /myid  
-debug help command
-
-
 ### 🏡
 send flat meters data to database.
+
+### ❤
+send health data to database.
 
 ---
 
