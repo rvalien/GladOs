@@ -48,7 +48,6 @@ set environment variables
 `TELEGRAM_TOKEN`- bot token  
 `WEATHER_TOKEN` - token for `openweathermap.org` api  
 `DATABASE_URL` - postgres db connection string  
-`REDISTOGO_URL` - redis db connection string  
 `DELAY`- seconds for repeating background tasks  
 `ADMIN`- telegram id to notifications  
 

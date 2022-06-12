@@ -19,10 +19,6 @@
       "description": "postgres connection url",
       "required": true
     },
-    "REDISTOGO_URL": {
-      "description": "redis connection url",
-      "required": true
-    },
     "MOBILE_LK_URL": {
       "description": "link to your mobile provider",
       "required": false
