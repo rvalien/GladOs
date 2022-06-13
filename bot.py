@@ -102,15 +102,15 @@ async def process_health_worker(message: types.Message, state: FSMContext):
 
 @dispatcher.message_handler(state=HealthForm.date)
 async def process_health(message: types.Message, state: FSMContext):
-    input_value = message.text
-    systolic, diastolic, weight = input_value.split(" ")
-
-    async with state.proxy() as data:
-        data["systolic"] = int(systolic)
-        data["diastolic"] = int(diastolic)
-        data["weight"] = float(weight.replace(",", "."))
-    await HealthForm.last()
-
+    match message.text.split(" "):
+        case systolic, diastolic, weight:
+            async with state.proxy() as data:
+                data["systolic"] = int(systolic)
+                data["diastolic"] = int(diastolic)
+                data["weight"] = float(weight.replace(",", "."))
+            await HealthForm.last()
+        case _:
+            await message.answer("ошибка ввода")
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
     keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancel_handler"))
