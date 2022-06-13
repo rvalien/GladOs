@@ -110,7 +110,7 @@ async def process_health(message: types.Message, state: FSMContext):
                 data["weight"] = float(weight.replace(",", "."))
             await HealthForm.last()
         case _:
-            await message.answer("ошибка ввода")
+            await message.answer("что-то не то ввёл.\nВот образец: 120 80 55.4\nДля отмены введил `cancel`")
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
     keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancel_handler"))
