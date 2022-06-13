@@ -28,21 +28,10 @@ from utils import mobile_utils, weather
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 telegram_token = os.environ["TELEGRAM_TOKEN"]
-# telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
 bp_user = os.environ["BP_USER"]
-
-# # mqtt
-# url = os.environ.get("CLOUDAMQP_URL")
-# params = pika.URLParameters(url)
-# connections = pika.BlockingConnection(params)
-# channel = connections.channel()
-#
-# channel.exchange_declare("test_exchange")
-# # channel.queue_declare("mqtt-subscription-ESP8266qos0", auto_delete=False)
-# channel.queue_bind("mqtt-subscription-ESP8266qos0", "test_exchange", "led_on_off")
 
 bot = Bot(token=telegram_token)
 storage = MemoryStorage()
