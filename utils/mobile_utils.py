@@ -5,7 +5,6 @@ from typing import NamedTuple
 
 import aiohttp
 from utils.db_api.db_gino import User
-
 from exceptions import CantGetPhoneData
 
 mobile_lk_url = os.environ["MOBILE_LK_URL"]
@@ -87,12 +86,10 @@ def prepare_response_text(data: dict[str, PhoneData]) -> str:
 
 async def get_internet_limit_text(user: User) -> str:
     """`internet` Action function, to get user's internet data."""
-    data = await get_mobile_data(user)
-    return print_mobile_info(data)
+    return print_mobile_info(await get_mobile_data(user)
+)
 
 
 async def get_all_bills_text(users: list[User]):
     """`bill` Action function, to get all balances."""
-
-    data = await get_all_mobile_bills(users)
-    return prepare_response_text(data)
+    return prepare_response_text(await get_all_mobile_bills(users))

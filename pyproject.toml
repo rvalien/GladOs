@@ -13,6 +13,8 @@ aioschedule = "^0.5.2"
 gino = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
+jupyter = "^1.0.0"
+pandas = "^1.4.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
