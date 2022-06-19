@@ -52,7 +52,7 @@ async def get_token(lk_secrets: LkData) -> str | None:
                 raise CantGetMetersData(data)
 
 
-async def get_data(auth_token: str):
+async def get_data(auth_token: str) -> list | None:
     """Get current data from site."""
     async with aiohttp.ClientSession() as session:
         async with session.get(
@@ -91,9 +91,10 @@ def parse_data(raw_list: list) -> str:
 
 
 async def previous_data():
+    print('HERE')
     token = await get_token(lk)
     data = await get_data(token)
-    print(data.keys())
+    print(data)
     return parse_data(data)
 
 
