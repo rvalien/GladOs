@@ -3,7 +3,7 @@ This bot made with ❤️
 """
 
 __author__ = "Valien"
-__version__ = "2022.2.1"
+__version__ = "2022.2.2"
 __maintainer__ = "Valien"
 __link__ = "https://github.com/rvalien/GladOs"
 
@@ -24,7 +24,7 @@ from states import HomeForm, HealthForm
 from asyncpg.exceptions import UniqueViolationError
 
 from keyboards import markup
-from utils import mobile_utils, weather
+from utils import mobile_utils, weather, home_helper
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 telegram_token = os.environ["TELEGRAM_TOKEN"]
@@ -50,6 +50,12 @@ async def send_welcome(message: types.Message):
 async def weather_worker(message):
     await types.ChatActions.typing(0.5)
     await message.reply(await weather.get_weather(weather_token))
+
+
+@dispatcher.message_handler(Text(equals="lk"))
+async def mosobleirc_worker(message):
+    await types.ChatActions.typing(0.5)
+    await message.reply(await home_helper.previous_data())
 
 
 @dispatcher.callback_query_handler(text="save_health_to_db", state=HealthForm.weight)
@@ -99,7 +105,7 @@ async def process_health(message: types.Message, state: FSMContext):
                 data["weight"] = float(weight.replace(",", "."))
             await HealthForm.last()
         case _:
-            await message.answer("что-то не то ввёл.\nВот образец: 120 80 55.4\nДля отмены введил `cancel`")
+            await message.answer("что-то не то ввёл.\nВот образец: 120 80 55.4\nДля отмены введи `cancel`")
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="записать показания", callback_data="save_health_to_db"))
     keyboard.add(types.InlineKeyboardButton(text="отмена", callback_data="cancel_handler"))
@@ -288,6 +294,7 @@ async def save_to_db(call: types.CallbackQuery, state: FSMContext):
             await flat_data.update(**data).apply()
         else:
             await Flat.create(**data)
+        await home_helper.send_new_data_to_lk(data)
 
     await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved", reply_markup=markup)
     await state.finish()
