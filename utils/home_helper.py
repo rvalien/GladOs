@@ -93,6 +93,7 @@ def parse_data(raw_list: list) -> str:
 async def previous_data():
     token = await get_token(lk)
     data = await get_data(token)
+    print(data.keys())
     return parse_data(data)
 
 
