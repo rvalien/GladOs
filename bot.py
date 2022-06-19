@@ -3,7 +3,7 @@ This bot made with ❤️
 """
 
 __author__ = "Valien"
-__version__ = "2022.2.2"
+__version__ = "2022.2.3"
 __maintainer__ = "Valien"
 __link__ = "https://github.com/rvalien/GladOs"
 
@@ -28,6 +28,7 @@ from utils import mobile_utils, weather, home_helper
 from utils.db_api.db_gino import db, Flat, User, Health, on_startup as gino_on_startup
 
 telegram_token = os.environ["TELEGRAM_TOKEN"]
+# telegram_token = os.environ["TEST_TELEGRAM_TOKEN"]
 weather_token = os.environ["WEATHER_TOKEN"]
 database = os.environ["DATABASE_URL"]
 delay = int(os.environ["DELAY"])
