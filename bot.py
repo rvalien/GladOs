@@ -271,7 +271,8 @@ async def process_hot_water(message: types.Message, state: FSMContext):
         data["hot"] = input_value
 
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text="передать показания", callback_data="save_to_db"))
+    keyboard.add(types.InlineKeyboardButton(text="сохранить в базу", callback_data="save_to_db"))
+    keyboard.add(types.InlineKeyboardButton(text="сохранить и передать", callback_data="save_to_db_and_sent_to_lk"))
 
     text = f"""
 эл. энергия T: {md.code(data["t"])} diff {md.code(data["t"] - data["previous_t"])}
@@ -295,9 +296,24 @@ async def save_to_db(call: types.CallbackQuery, state: FSMContext):
             await flat_data.update(**data).apply()
         else:
             await Flat.create(**data)
-        await home_helper.send_new_data_to_lk(data)
 
     await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved", reply_markup=markup)
+    await state.finish()
+
+
+@dispatcher.callback_query_handler(text="save_to_db_and_sent_to_lk", state=HomeForm.date)
+async def save_to_db_and_sent_to_lk(call: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        data["date"] = datetime.datetime.now().date()
+        data = dict(filter(lambda item: not item[0].startswith("previous_"), data.items()))
+        flat_data = await Flat.get(data["date"])
+        if flat_data:
+            await flat_data.update(**data).apply()
+        else:
+            await Flat.create(**data)
+        await home_helper.send_new_data_to_lk(data)
+
+    await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved & sent", reply_markup=markup)
     await state.finish()
 
 

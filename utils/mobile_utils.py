@@ -38,8 +38,7 @@ async def get_mobile_data(user: User) -> PhoneData:
     async with aiohttp.ClientSession() as session:
         async with session.post(url=mobile_lk_url, data={"phone": user.phone, "pass": user.password}) as response:
             raw_response = await response.text()
-
-            if response.status == 200:
+            if response.status == 200 and json.loads(raw_response).get('auth') is True:
                 raw_response = json.loads(raw_response).get("customers", [])[0].get("ctnInfo")
                 raw_response["blcokDate"] = datetime.strptime(raw_response["blcokDate"], "%Y-%m-%d").date()
                 return PhoneData(**raw_response)
@@ -86,8 +85,7 @@ def prepare_response_text(data: dict[str, PhoneData]) -> str:
 
 async def get_internet_limit_text(user: User) -> str:
     """`internet` Action function, to get user's internet data."""
-    return print_mobile_info(await get_mobile_data(user)
-)
+    return print_mobile_info(await get_mobile_data(user))
 
 
 async def get_all_bills_text(users: list[User]):
