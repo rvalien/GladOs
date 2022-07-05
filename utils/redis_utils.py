@@ -11,7 +11,7 @@ def set_last_interact(redis_client, user_id, param):
     interacts = redis_client.get(f"{user_id}_interacts") if redis_client.get(f"{user_id}_interacts") else 0
     interacts_update = redis_client.set(f"{user_id}_interacts", int(interacts) + 1)
     redis_client.set(f"{user_id}_last_interact_timestamp", utc_now.timestamp())
-    logger.info(f"{user_id=}\n{utc_now.strftime('%Y-%m-%d %H:%M:%S')}\n{param=}\n{interacts=}\n{interacts_update=}")
+    logger.info(f"{user_id=}\n{utc_now:%F %T}\n{param=}\n{interacts=}\n{interacts_update=}")
 
 
 def its_time_to(message, redis_client, key: str) -> str:

@@ -297,7 +297,7 @@ async def save_to_db(call: types.CallbackQuery, state: FSMContext):
         else:
             await Flat.create(**data)
 
-    await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved", reply_markup=markup)
+    await call.message.answer(f"{data['date']} saved", reply_markup=markup)
     await state.finish()
 
 
@@ -313,7 +313,7 @@ async def save_to_db_and_sent_to_lk(call: types.CallbackQuery, state: FSMContext
             await Flat.create(**data)
         await home_helper.send_new_data_to_lk(data)
 
-    await call.message.answer(f"{data['date'].strftime('%Y %m %d')} saved & sent", reply_markup=markup)
+    await call.message.answer(f"{data['date']:%F} saved & sent", reply_markup=markup)
     await state.finish()
 
 
