@@ -32,24 +32,27 @@ lk = LkData(
 
 async def get_token(lk_secrets: LkData) -> str | None:
     async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url=urljoin(URL, "tenants-registration/v2/login"),
-            json={
-                "loginMethod": "PERSONAL_OFFICE",
-                "password": lk_secrets.password,
-                "phone": lk_secrets.phone,
-            },
-        ) as response:
-            try:
-                raw_response = await response.json()
+        try:
+            async with session.post(
+                url=urljoin(URL, "tenants-registration/v2/login"),
+                json={
+                    "loginMethod": "PERSONAL_OFFICE",
+                    "password": lk_secrets.password,
+                    "phone": lk_secrets.phone,
+                },
+            ) as response:
                 try:
-                    return raw_response["token"]
-                except KeyError:
-                    logging.error(raw_response)
-            except aiohttp.ContentTypeError as err_text:
-                logging.error(err_text)
-                data = await response.text()
-                raise CantGetMetersData(data)
+                    raw_response = await response.json()
+                    try:
+                        return raw_response["token"]
+                    except KeyError:
+                        logging.error(raw_response)
+                except aiohttp.ContentTypeError as err_text:
+                    logging.error(err_text)
+                    data = await response.text()
+                    raise CantGetMetersData(data)
+        except aiohttp.ClientConnectorError as e_text:
+            raise CantGetMetersData(e_text)
 
 
 async def get_data(auth_token: str) -> list | None:
