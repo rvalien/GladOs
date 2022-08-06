@@ -356,5 +356,5 @@ async def on_startup(dispatcher):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     logging.basicConfig(level=logging.INFO)
-    loop.call_later(delay, repeat, check_health, loop)
+    # loop.call_later(delay, repeat, check_health, loop)
     asyncio.run(executor.start_polling(dispatcher, on_startup=on_startup, loop=loop, skip_updates=True))
