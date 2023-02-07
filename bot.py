@@ -206,7 +206,7 @@ async def process_t1(message: types.Message, state: FSMContext):
     if previous_data:
         previous = previous_data.get("previous_t1")
 
-        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=50)
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=300)
         if error_message:
             return await message.reply(error_message)
 
@@ -225,7 +225,7 @@ async def process_t2(message: types.Message, state: FSMContext):
 
     if previous_data:
         previous = previous_data.get("previous_t2")
-        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=250)
+        error_message = make_compare_error_message(current=input_value, previous=previous, alarm_value=300)
         if error_message:
             return await message.reply(error_message)
 

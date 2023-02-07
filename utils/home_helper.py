@@ -76,7 +76,7 @@ async def post_data(auth_token, data_object) -> None:
     """
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            url=urljoin(URL, f"/clients/meters/{data_object.obj_id}/values"),
+            url=urljoin(URL, f"/api/api/clients/meters/{data_object.obj_id}/values"),
             headers={"X-Auth-Tenant-Token": auth_token},
             json={"value1": data_object.value},
         ) as response:
