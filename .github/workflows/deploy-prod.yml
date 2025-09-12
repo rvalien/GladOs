@@ -13,15 +13,6 @@ jobs:
     environment: cd-prod
     steps:
 
-      - name: Debug secrets (REMOVE IN PRODUCTION!)
-        run: |
-          echo "GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}"
-          echo "GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}"
-          echo "PROD_HOST: ${{ secrets.PROD_HOST }}"
-          echo "PROD_USERNAME: ${{ secrets.PROD_USERNAME }}"
-          echo "PROD_APP_PATH: ${{ secrets.PROD_APP_PATH }}"
-          # Не выводим SSH_PRIVATE_KEY из соображений безопасности!
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
