@@ -1,10 +1,12 @@
 name: Deploy to Production
 
 on:
-  push:
+  workflow_run:
+    workflows: [ "Release Process" ]
+    types:
+      - completed
     branches:
       - release/prod
-      - master
 
 jobs:
   deploy:
@@ -23,10 +25,11 @@ jobs:
             git fetch --all --tags
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
             git pull origin $CURRENT_BRANCH
-
+            echo 'compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"'
             docker compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"
             docker compose up -d
             docker compose ps
+            echo docker logs glados-backend-1
 
       - name: Notify Success
         if: success()
