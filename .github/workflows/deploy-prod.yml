@@ -46,5 +46,5 @@ jobs:
             cd ${{ secrets.PROD_APP_PATH }}
             git fetch --tags
             git checkout "v${{ github.event.inputs.version }}"
-            docker compose build backend
+            docker compose build backend --build-arg COMPOSE_TAG=v${{ github.event.inputs.version }}
             docker compose up -d
