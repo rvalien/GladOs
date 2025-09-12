@@ -1,18 +1,30 @@
 name: Deploy to Production
 
 on:
-  workflow_run:
-    workflows: [ "Release Process" ]
-    types:
-      - completed
+  push:
     branches:
       - release/prod
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия для деплоя (например: v14.03)'
+        required: false
+        default: 'latest'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: cd-prod
     steps:
+      - name: Deploy Information
+        run: |
+          echo "🚀 Начинаем деплой!"
+          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "Версия: v${{ github.event.inputs.version }}"
+          else
+            echo "Версия: latest (из текущей ветки)"
+          fi
+
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -23,17 +35,31 @@ jobs:
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
             git fetch --all --tags
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            git pull origin $CURRENT_BRANCH
-            echo 'compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"'
-            docker compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"
+            
+            # Если указана версия и это тег, чекаутим его
+            if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+              echo "🏷️ Checking out tag: v${{ github.event.inputs.version }}"
+              git checkout "v${{ github.event.inputs.version }}"
+            else
+              # Иначе используем текущую ветку
+              CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+              echo "📋 Current branch: $CURRENT_BRANCH"
+              git pull origin $CURRENT_BRANCH
+            fi
+            
+            echo "🐳 Building Docker images..."
+            docker compose build backend
+            echo "🔄 Starting services..."
             docker compose up -d
+            echo "✅ Deployment completed!"
             docker compose ps
-            echo docker logs glados-backend-1
 
       - name: Notify Success
         if: success()
         run: |
           echo "🎉 Deployment успешно завершен!"
-          echo "Ветка: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
+          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "Версия: v${{ github.event.inputs.version }}"
+          else
+            echo "Ветка: release/prod"
+          fi

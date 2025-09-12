@@ -53,10 +53,3 @@ jobs:
             После мержа автоматически запустится деплой."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Success Message
-        run: |
-          echo "Pull Request создан успешно!"
-          echo "Версия: v${{ github.event.inputs.version }}"
-          echo "Исходная ветка: ${{ github.event.inputs.source_branch }}"
-          echo "Целевая ветка: ${{ github.event.inputs.target_branch }}"
