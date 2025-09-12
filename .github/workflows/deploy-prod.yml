@@ -34,7 +34,7 @@ jobs:
             
             # Собираем и запускаем контейнеры
             echo "🐳 Building Docker images..."
-            docker compose build backend
+            docker compose build backend --build-arg COMPOSE_TAG=v${{ github.event.inputs.version }}
             
             echo "🔄 Starting services..."
             docker compose up -d
