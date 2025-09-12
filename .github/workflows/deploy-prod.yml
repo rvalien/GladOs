@@ -1,0 +1,35 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Номер релиза (25.5, 25.5.1)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Git tag
+        run: |
+          git config user.name "${{ secrets.GIT_USER_NAME }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.PROD_APP_PATH }}
+            git fetch --tags
+            git checkout "v${{ github.event.inputs.version }}"
+            docker compose build backend
+            docker compose up -d
