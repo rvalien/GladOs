@@ -34,14 +34,14 @@ jobs:
             
             # Собираем и запускаем контейнеры
             echo "🐳 Building Docker images..."
-            docker-compose build backend
+            docker compose build backend
             
             echo "🔄 Starting services..."
-            docker-compose up -d
+            docker compose up -d
             
             # Проверяем статус
             echo "✅ Deployment completed!"
-            docker-compose ps
+            docker compose ps
 
       - name: Notify Success
         if: success()
