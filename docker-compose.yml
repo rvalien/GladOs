@@ -1,6 +1,5 @@
-version: '3'
 services:
-  hello-world:
+  backend:
     build: .
     image: my-hello-world:${COMPOSE_TAG:-latest}
     ports:
