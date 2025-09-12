@@ -19,29 +19,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download version artifact (if triggered by workflow)
+      - name: Download version artifact
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          workflow: release-process.yml
           name: release-version
+          path: .
 
       - name: Read version from artifact or inputs
         id: get_version
         run: |
           if [ -f version.txt ]; then
             VERSION=$(cat version.txt)
-            echo "version_from_artifact=$VERSION" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Found version in artifact: $VERSION"
           elif [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "version_from_artifact=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "Using version from inputs: ${{ github.event.inputs.version }}"
           else
-            echo "version_from_artifact=latest" >> $GITHUB_OUTPUT
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "Using latest version"
           fi
 
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
-          echo "Версия: ${{ steps.get_version.outputs.version_from_artifact }}"
+          echo "Версия: ${{ steps.get_version.outputs.version }}"
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
@@ -54,11 +57,16 @@ jobs:
             cd ${{ secrets.PROD_APP_PATH }}
             git fetch --all --tags
             
-            VERSION="${{ steps.get_version.outputs.version_from_artifact }}"
+            VERSION="${{ steps.get_version.outputs.version }}"
             
             if [ "$VERSION" != "latest" ]; then
               echo "🏷️ Checking out tag: v$VERSION"
-              git checkout "v$VERSION"
+              if git checkout "v$VERSION"; then
+                echo "Successfully checked out tag v$VERSION"
+              else
+                echo "Failed to checkout tag v$VERSION, using latest"
+                git pull origin release/prod
+              fi
             else
               CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
               echo "📋 Current branch: $CURRENT_BRANCH"
@@ -70,4 +78,11 @@ jobs:
             echo "🔄 Starting services..."
             docker compose up -d
             echo "✅ Deployment completed!"
-            docker compose logs glados-backend-1
+            docker compose ps
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "🎉 Deployment успешно завершен!"
+          echo "Версия: ${{ steps.get_version.outputs.version }}"
+          docker logs glados-backend-1
