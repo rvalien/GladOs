@@ -30,6 +30,16 @@ jobs:
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
 
+      - name: Save version to artifact
+        run: |
+          echo "${{ github.event.inputs.version }}" > version.txt
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-version
+          path: version.txt
+
       - name: Create Pull Request
         run: |
           gh pr create \
@@ -50,6 +60,6 @@ jobs:
             2. Утвердите PR
             3. Мержите в ветку ${{ github.event.inputs.target_branch }}
             
-            После мержа автоматически запустится деплой."
+            После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }}."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

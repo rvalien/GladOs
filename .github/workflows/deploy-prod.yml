@@ -16,14 +16,32 @@ jobs:
     runs-on: ubuntu-latest
     environment: cd-prod
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download version artifact (if triggered by workflow)
+        uses: dawidd6/action-download-artifact@v2
+        continue-on-error: true
+        with:
+          workflow: release-process.yml
+          name: release-version
+
+      - name: Read version from artifact or inputs
+        id: get_version
+        run: |
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt)
+            echo "version_from_artifact=$VERSION" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "version_from_artifact=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version_from_artifact=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
-          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "Версия: v${{ github.event.inputs.version }}"
-          else
-            echo "Версия: latest (из текущей ветки)"
-          fi
+          echo "Версия: ${{ steps.get_version.outputs.version_from_artifact }}"
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
@@ -36,12 +54,12 @@ jobs:
             cd ${{ secrets.PROD_APP_PATH }}
             git fetch --all --tags
             
-            # Если указана версия и это тег, чекаутим его
-            if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-              echo "🏷️ Checking out tag: v${{ github.event.inputs.version }}"
-              git checkout "v${{ github.event.inputs.version }}"
+            VERSION="${{ steps.get_version.outputs.version_from_artifact }}"
+            
+            if [ "$VERSION" != "latest" ]; then
+              echo "🏷️ Checking out tag: v$VERSION"
+              git checkout "v$VERSION"
             else
-              # Иначе используем текущую ветку
               CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
               echo "📋 Current branch: $CURRENT_BRANCH"
               git pull origin $CURRENT_BRANCH
@@ -52,14 +70,4 @@ jobs:
             echo "🔄 Starting services..."
             docker compose up -d
             echo "✅ Deployment completed!"
-            docker compose ps
-
-      - name: Notify Success
-        if: success()
-        run: |
-          echo "🎉 Deployment успешно завершен!"
-          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "Версия: v${{ github.event.inputs.version }}"
-          else
-            echo "Ветка: release/prod"
-          fi
+            docker compose logs glados-backend-1
