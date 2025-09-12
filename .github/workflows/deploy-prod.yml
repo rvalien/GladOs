@@ -1,50 +1,51 @@
 name: Deploy to Production
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Номер релиза (25.5, 25.5.1)'
-        required: true
+  push:
+    branches:
+      - release/prod
+      - master
 
 jobs:
-  release:
+  deploy:
     runs-on: ubuntu-latest
     environment: cd-prod
     steps:
-
-      - name: Debug secrets (REMOVE IN PRODUCTION!)
-        run: |
-          echo "GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}"
-          echo "GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}"
-          echo "PROD_HOST: ${{ secrets.PROD_HOST }}"
-          echo "PROD_USERNAME: ${{ secrets.PROD_USERNAME }}"
-          echo "PROD_APP_PATH: ${{ secrets.PROD_APP_PATH }}"
-          # Не выводим SSH_PRIVATE_KEY из соображений безопасности!
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Create Git tag
-        run: |
-          git config user.name "${{ secrets.GIT_USER_NAME }}"
-          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
-          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
-
-      - name: Deploy to production
+      - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 30s
           script: |
+            echo "🚀 Starting deployment..."
             cd ${{ secrets.PROD_APP_PATH }}
-            git fetch --tags
-            git checkout "v${{ github.event.inputs.version }}"
+            
+            # Получаем последние изменения
+            git fetch --all --tags
+            
+            # Определяем текущую ветку
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            echo "📋 Current branch: $CURRENT_BRANCH"
+            
+            # Пуллим изменения
+            git pull origin $CURRENT_BRANCH
+            
+            # Собираем и запускаем контейнеры
+            echo "🐳 Building Docker images..."
             docker compose build backend
+            
+            echo "🔄 Starting services..."
             docker compose up -d
+            
+            # Проверяем статус
+            echo "✅ Deployment completed!"
+            docker compose ps
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "🎉 Deployment успешно завершен!"
+          echo "Ветка: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"

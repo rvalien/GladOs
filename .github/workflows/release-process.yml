@@ -1,0 +1,62 @@
+name: Release Process
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Номер релиза (25.5, 25.5.1)'
+        required: true
+      source_branch:
+        description: 'Исходная ветка для релиза'
+        required: true
+        default: 'master'
+      target_branch:
+        description: 'Целевая ветка для релиза'
+        required: true
+        default: 'release/prod'
+
+jobs:
+  release_process:
+    environment: cd-prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release Tag
+        run: |
+          git config user.name "${{ secrets.GIT_USER_NAME }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --base ${{ github.event.inputs.target_branch }} \
+            --head ${{ github.event.inputs.source_branch }} \
+            --title "Release v${{ github.event.inputs.version }}" \
+            --body "Release version ${{ github.event.inputs.version }}
+            
+            **Release Notes:**
+            - Version: v${{ github.event.inputs.version }}
+            - Source: ${{ github.event.inputs.source_branch }}
+            - Target: ${{ github.event.inputs.target_branch }}
+            
+            После мержа этого PR будет автоматически запущен деплой на production.
+            
+            Пожалуйста:
+            1. Проверьте изменения
+            2. Утвердите PR
+            3. Мержите в ветку ${{ github.event.inputs.target_branch }}
+            
+            После мержа автоматически запустится деплой."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Success Message
+        run: |
+          echo "✅ Pull Request создан успешно!"
+          echo "Версия: v${{ github.event.inputs.version }}"
+          echo "Исходная ветка: ${{ github.event.inputs.source_branch }}"
+          echo "Целевая ветка: ${{ github.event.inputs.target_branch }}"
