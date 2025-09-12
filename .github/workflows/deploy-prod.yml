@@ -1,10 +1,12 @@
 name: Deploy to Production
 
 on:
-  push:
+  workflow_run:
+    workflows: [ "Release Process" ]
+    types:
+      - completed
     branches:
       - release/prod
-      - master
 
 jobs:
   deploy:
@@ -19,29 +21,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo "🚀 Starting deployment..."
             cd ${{ secrets.PROD_APP_PATH }}
-            
-            # Получаем последние изменения
             git fetch --all --tags
-            
-            # Определяем текущую ветку
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            echo "📋 Current branch: $CURRENT_BRANCH"
-            
-            # Пуллим изменения
             git pull origin $CURRENT_BRANCH
-            
-            # Собираем и запускаем контейнеры
-            echo "🐳 Building Docker images..."
-            docker compose build backend --build-arg COMPOSE_TAG=v${{ github.event.inputs.version }}
-            
-            echo "🔄 Starting services..."
+            echo 'compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"'
+            docker compose build backend --build-arg COMPOSE_TAG="v${{ github.event.inputs.version }}"
             docker compose up -d
-            
-            # Проверяем статус
-            echo "✅ Deployment completed!"
             docker compose ps
+            echo docker logs glados-backend-1
 
       - name: Notify Success
         if: success()
