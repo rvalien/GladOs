@@ -9,7 +9,7 @@ on:
       source_branch:
         description: 'Исходная ветка для релиза'
         required: true
-        default: 'develop'
+        default: 'master'
       target_branch:
         description: 'Целевая ветка для релиза'
         required: true
@@ -17,6 +17,7 @@ on:
 
 jobs:
   release_process:
+    environment: cd-prod
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
