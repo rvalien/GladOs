@@ -1,5 +1,4 @@
 name: Deploy to Production
-
 on:
   push:
     branches:
@@ -18,33 +17,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Download version artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: release-version
-          path: .
-
-      - name: Read version from artifact or inputs
+      
+      - name: Extract version from commit or input
         id: get_version
         run: |
-          if [ -f version.txt ]; then
-            VERSION=$(cat version.txt)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "Found version in artifact: $VERSION"
-          elif [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-            echo "Using version from inputs: ${{ github.event.inputs.version }}"
+          # Приоритет: manual input -> commit message -> git tag -> latest
+          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "🎯 Используется версия из inputs: $VERSION"
           else
-            echo "version=latest" >> $GITHUB_OUTPUT
-            echo "Using latest version"
+            # Извлекаем версию из commit message (ищем паттерн [RELEASE-vX.X])
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              echo "📝 Найдена версия в commit message: $VERSION"
+            else
+              # Пробуем получить последний тег
+              git fetch --tags
+              LATEST_TAG=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "")
+              if [ -n "$LATEST_TAG" ]; then
+                VERSION=${LATEST_TAG#v}  # Убираем префикс 'v'
+                echo "🏷️ Используется последний тег: $VERSION"
+              else
+                VERSION="latest"
+                echo "🔄 Используется latest версия"
+              fi
+            fi
           fi
-
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "final_version=$VERSION" >> $GITHUB_ENV
+      
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
           echo "Версия: ${{ steps.get_version.outputs.version }}"
+          echo "Trigger: ${{ github.event_name }}"
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
@@ -62,9 +70,9 @@ jobs:
             if [ "$VERSION" != "latest" ]; then
               echo "🏷️ Checking out tag: v$VERSION"
               if git checkout "v$VERSION"; then
-                echo "Successfully checked out tag v$VERSION"
+                echo "✅ Successfully checked out tag v$VERSION"
               else
-                echo "Failed to checkout tag v$VERSION, using latest"
+                echo "❌ Failed to checkout tag v$VERSION, using latest"
                 git pull origin release/prod
               fi
             else
@@ -79,10 +87,21 @@ jobs:
             docker compose up -d
             echo "✅ Deployment completed!"
             docker compose ps
-
+      
       - name: Notify Success
         if: success()
         run: |
           echo "🎉 Deployment успешно завершен!"
-          echo "Версия: ${{ steps.get_version.outputs.version }}"
-          docker logs glados-backend-1
+          echo "📌 Версия: ${{ steps.get_version.outputs.version }}"
+          echo "🔗 Commit: ${{ github.sha }}"
+      
+      - name: Show logs
+        if: success()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            docker logs glados-backend-1 --tail 50

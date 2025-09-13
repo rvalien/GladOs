@@ -1,5 +1,4 @@
 name: Release Process
-
 on:
   workflow_dispatch:
     inputs:
@@ -22,30 +21,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      
       - name: Create Release Tag
         run: |
           git config user.name "${{ secrets.GIT_USER_NAME }}"
           git config user.email "${{ secrets.GIT_USER_EMAIL }}"
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
-
-      - name: Save version to artifact
-        run: |
-          echo "${{ github.event.inputs.version }}" > version.txt
-
-      - name: Upload version artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-version
-          path: version.txt
-
-      - name: Create Pull Request
+      
+      - name: Create Pull Request with version in title
         run: |
           gh pr create \
             --base ${{ github.event.inputs.target_branch }} \
             --head ${{ github.event.inputs.source_branch }} \
-            --title "Release v${{ github.event.inputs.version }}" \
+            --title "[RELEASE-v${{ github.event.inputs.version }}] Release v${{ github.event.inputs.version }}" \
             --body "Release version ${{ github.event.inputs.version }}
             
             **Release Notes:**
@@ -57,7 +46,7 @@ jobs:
             
             Пожалуйста:
             1. Проверьте изменения
-            2. Утвердите PR
+            2. Утвердьте PR
             3. Мержите в ветку ${{ github.event.inputs.target_branch }}
             
             После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }}."
