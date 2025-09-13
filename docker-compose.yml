@@ -6,6 +6,7 @@ services:
       args:
         RELEASE_VERSION: ${RELEASE_VERSION:-latest}
       tags:
-        - backend:${RELEASE_VERSION:-latest}
-        - backend:latest
-    image: backend:${RELEASE_VERSION:-latest}
+        - glados-backend:${RELEASE_VERSION:-latest}
+        - glados-backend:latest
+    image: glados-backend:${RELEASE_VERSION:-latest}
+    container_name: glados-backend-1
