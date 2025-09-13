@@ -29,24 +29,41 @@ jobs:
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
       
-      - name: Create Pull Request with version in title
+
+      # Сохраняем версию в repository variable
+      - name: Set release version variable
+        run: |
+          gh variable set CURRENT_RELEASE_VERSION --body "${{ github.event.inputs.version }}"
+          echo "✅ Установлена версия релиза: ${{ github.event.inputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+
+      - name: Create Pull Request
         run: |
           gh pr create \
             --base ${{ github.event.inputs.target_branch }} \
             --head ${{ github.event.inputs.source_branch }} \
             --title "[RELEASE-v${{ github.event.inputs.version }}] Release v${{ github.event.inputs.version }}" \
-            --body "Release version ${{ github.event.inputs.version }}
-            
-            **Release Notes:**
-            - Version: v${{ github.event.inputs.version }}
-            - Source: ${{ github.event.inputs.source_branch }}
-            - Target: ${{ github.event.inputs.target_branch }}
-                       
-            Пожалуйста:
-            1. Проверьте изменения
-            2. Утвердьте PR
-            3. Не унывайте
-            
-            После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод"
+            --template release \
+            --assignee @me
+#      - name: Create Pull Request with version in title
+#        run: |
+#          gh pr create \
+#            --base ${{ github.event.inputs.target_branch }} \
+#            --head ${{ github.event.inputs.source_branch }} \
+#            --title "[RELEASE-v${{ github.event.inputs.version }}] Release v${{ github.event.inputs.version }}" \
+#            --body "Release version ${{ github.event.inputs.version }}
+#
+#            **Release Notes:**
+#            - Version: v${{ github.event.inputs.version }}
+#            - Source: ${{ github.event.inputs.source_branch }}
+#            - Target: ${{ github.event.inputs.target_branch }}
+#
+#            Пожалуйста:
+#            1. Проверьте изменения
+#            2. Утвердите PR
+#            3. Не унывайте
+#
+#            После слияния, автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
