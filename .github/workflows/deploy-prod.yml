@@ -1,4 +1,3 @@
-# deploy-prod.yml
 name: Deploy to Production
 on:
   push:
@@ -19,41 +18,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Determine version to deploy
+      - name: Extract version from commit or input
         id: get_version
         run: |
-          # Приоритет: inputs -> repository variable -> latest
+          # Приоритет: manual input -> commit message -> git tag -> latest
           if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
             VERSION="${{ github.event.inputs.version }}"
             echo "🎯 Используется версия из inputs: $VERSION"
-          elif [ "${{ vars.CURRENT_RELEASE_VERSION }}" != "" ]; then
-            VERSION="${{ vars.CURRENT_RELEASE_VERSION }}"
-            echo "📦 Используется версия из релиза: $VERSION"
           else
-            VERSION="latest"
-            echo "🔄 Используется latest версия"
+            # Извлекаем версию из commit message (ищем паттерн [RELEASE-vX.X])
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              echo "📝 Найдена версия в commit message: $VERSION"
+            else
+              # Пробуем получить последний тег
+              git fetch --tags
+              LATEST_TAG=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "")
+              if [ -n "$LATEST_TAG" ]; then
+                VERSION=${LATEST_TAG#v}  # Убираем префикс 'v'
+                echo "🏷️ Используется последний тег: $VERSION"
+              else
+                VERSION="latest"
+                echo "🔄 Используется latest версия"
+              fi
+            fi
           fi
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "final_version=$VERSION" >> $GITHUB_ENV
-      
-      - name: Clear release version (if used)
-        if: vars.CURRENT_RELEASE_VERSION != '' && github.event.inputs.version == ''
-        run: |
-          gh variable delete CURRENT_RELEASE_VERSION || echo "Variable already deleted or doesn't exist"
-          echo "🧹 Очищена переменная релиза после использования"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
           echo "Версия: ${{ steps.get_version.outputs.version }}"
           echo "Trigger: ${{ github.event_name }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "Коммит: ${{ github.sha }}"
-          fi
-      
+
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
         with:
