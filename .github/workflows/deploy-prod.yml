@@ -3,12 +3,6 @@ on:
   push:
     branches:
       - release/prod
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Версия для деплоя (например: v14.03)'
-        required: false
-        default: 'latest'
 
 jobs:
   deploy:
@@ -18,41 +12,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract version from commit or input
+      - name: Extract version from commit message
         id: get_version
         run: |
-          # Приоритет: manual input -> commit message -> git tag -> latest
-          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            echo "🎯 Используется версия из inputs: $VERSION"
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "Найдена версия в commit: $VERSION"
           else
-            # Извлекаем версию из commit message (ищем паттерн [RELEASE-vX.X])
-            COMMIT_MSG="${{ github.event.head_commit.message }}"
-            if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
-              VERSION="${BASH_REMATCH[1]}"
-              echo "📝 Найдена версия в commit message: $VERSION"
-            else
-              # Пробуем получить последний тег
-              git fetch --tags
-              LATEST_TAG=$(git describe --tags --abbrev=0 --match="v*" 2>/dev/null || echo "")
-              if [ -n "$LATEST_TAG" ]; then
-                VERSION=${LATEST_TAG#v}  # Убираем префикс 'v'
-                echo "🏷️ Используется последний тег: $VERSION"
-              else
-                VERSION="latest"
-                echo "🔄 Используется latest версия"
-              fi
-            fi
+            VERSION="latest"
+            echo "Используется latest"
           fi
-          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "final_version=$VERSION" >> $GITHUB_ENV
-
-      - name: Deploy Information
-        run: |
-          echo "🚀 Начинаем деплой!"
-          echo "Версия: ${{ steps.get_version.outputs.version }}"
-          echo "Trigger: ${{ github.event_name }}"
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
@@ -63,50 +34,11 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
-            git fetch --all --tags
+            git pull origin release/prod
             
-            VERSION="${{ steps.get_version.outputs.version }}"
-            
-            if [ "$VERSION" != "latest" ]; then
-              echo "🏷️ Checking out tag: v$VERSION"
-              if git checkout "v$VERSION"; then
-                echo "✅ Successfully checked out tag v$VERSION"
-              else
-                echo "❌ Failed to checkout tag v$VERSION, using latest"
-                git pull origin release/prod
-              fi
-            else
-              CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-              echo "📋 Current branch: $CURRENT_BRANCH"
-              git pull origin $CURRENT_BRANCH
-            fi
-            
-            echo "🐳 Building Docker images with version: $VERSION..."
-            export RELEASE_VERSION=$VERSION
-            
-            # Останавливаем старые контейнеры
-            docker compose down
+            export RELEASE_VERSION="${{ steps.get_version.outputs.version }}"            
             docker compose build --build-arg RELEASE_VERSION=$VERSION
-            docker tag glados-backend:$VERSION glados-backend:latest 2>/dev/null || true
-            
-            echo "🔄 Starting services with version $VERSION..."
             docker compose up -d
-            
-            echo "⏳ Waiting for services to stabilize..."
-            sleep 15
-            
-            echo "✅ Deployment completed!"
-            echo "📊 Service status:"
-            docker compose ps
-            
-            echo "🏷️ Deployed version: $VERSION"
-
-      - name: Notify Success
-        if: success()
-        run: |
-          echo "Deployment успешно завершен!"
-          echo "Версия: ${{ steps.get_version.outputs.version }}"
-          echo "Commit: ${{ github.sha }}"
 
       - name: Show logs
         if: success()

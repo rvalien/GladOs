@@ -6,17 +6,4 @@ services:
       args:
         RELEASE_VERSION: ${RELEASE_VERSION:-latest}
     image: glados-backend:${RELEASE_VERSION:-latest}
-    container_name: glados-backend-1
-    environment:
-      - VERSION=${RELEASE_VERSION:-latest}
-      - ENVIRONMENT=production
     restart: unless-stopped
-    networks:
-      - glados-network
-    labels:
-      - "version=${RELEASE_VERSION:-latest}"
-      - "service=backend"
-
-networks:
-  glados-network:
-    driver: bridge
