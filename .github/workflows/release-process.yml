@@ -50,3 +50,21 @@ jobs:
             **⚠️После слияния, автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод**"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Notify Release Created
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            📦 *New Release Prepared*
+            
+            🏷️ *Version*: `v${{ github.event.inputs.version }}`
+            🌿 *Source*: `${{ github.event.inputs.source_branch }}`
+            🎯 *Target*: `${{ github.event.inputs.target_branch }}`
+            
+            ⏳ *Waiting for PR approval and merge*
+            
+            [Review Pull Request](${{ github.server_url }}/${{ github.repository }}/pulls)

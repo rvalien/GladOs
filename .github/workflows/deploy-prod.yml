@@ -37,11 +37,5 @@ jobs:
             git pull origin release/prod
             
             RELEASE_VERSION="${{ env.version }}"
-            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend
-            docker tag backend:$RELEASE_VERSION
-            docker tag backend:$RELEASE_VERSION backend:latest
-            docker tag backend:$RELEASE_VERSION backend:$(date +%Y%m%d)
-            
+            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend            
             docker compose up -d
-            
-            docker logs glados-backend-1
