@@ -28,25 +28,25 @@ jobs:
           git config user.email "${{ secrets.GIT_USER_EMAIL }}"
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
-      
+
       - name: Create Pull Request with version in title
         run: |
           gh pr create \
             --base ${{ github.event.inputs.target_branch }} \
             --head ${{ github.event.inputs.source_branch }} \
             --title "[RELEASE-v${{ github.event.inputs.version }}] Release v${{ github.event.inputs.version }}" \
-            --body "Release version ${{ github.event.inputs.version }}
-            
+            --body "Release version **${{ github.event.inputs.version }}**
+
             **Release Notes:**
             - Version: v${{ github.event.inputs.version }}
             - Source: ${{ github.event.inputs.source_branch }}
             - Target: ${{ github.event.inputs.target_branch }}
-                       
+
             Пожалуйста:
             1. Проверьте изменения
-            2. Утвердьте PR
+            2. Утвердите PR
             3. Не унывайте
-            
-            После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод"
+
+            **⚠️После слияния, автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод**"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
