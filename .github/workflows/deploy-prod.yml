@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Extract version from commit or input
         id: get_version
         run: |
@@ -47,7 +47,7 @@ jobs:
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "final_version=$VERSION" >> $GITHUB_ENV
-      
+
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
@@ -81,20 +81,33 @@ jobs:
               git pull origin $CURRENT_BRANCH
             fi
             
-            echo "🐳 Building Docker images..."
-            docker compose build backend
-            echo "🔄 Starting services..."
+            echo "🐳 Building Docker images with version: $VERSION..."
+            export RELEASE_VERSION=$VERSION
+            
+            # Останавливаем старые контейнеры
+            docker compose down
+            docker compose build --build-arg RELEASE_VERSION=$VERSION
+            docker tag glados-backend:$VERSION glados-backend:latest 2>/dev/null || true
+            
+            echo "🔄 Starting services with version $VERSION..."
             docker compose up -d
+            
+            echo "⏳ Waiting for services to stabilize..."
+            sleep 15
+            
             echo "✅ Deployment completed!"
+            echo "📊 Service status:"
             docker compose ps
-      
+            
+            echo "🏷️ Deployed version: $VERSION"
+
       - name: Notify Success
         if: success()
         run: |
-          echo "🎉 Deployment успешно завершен!"
-          echo "📌 Версия: ${{ steps.get_version.outputs.version }}"
-          echo "🔗 Commit: ${{ github.sha }}"
-      
+          echo "Deployment успешно завершен!"
+          echo "Версия: ${{ steps.get_version.outputs.version }}"
+          echo "Commit: ${{ github.sha }}"
+
       - name: Show logs
         if: success()
         uses: appleboy/ssh-action@v1.0.0
