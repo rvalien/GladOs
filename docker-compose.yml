@@ -5,8 +5,5 @@ services:
       dockerfile: Dockerfile
       args:
         RELEASE_VERSION: ${RELEASE_VERSION:-latest}
-      tags:
-        - glados-backend:${RELEASE_VERSION:-latest}
-        - glados-backend:latest
     image: glados-backend:${RELEASE_VERSION:-latest}
     container_name: glados-backend
