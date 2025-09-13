@@ -38,9 +38,9 @@ jobs:
             --body "Release version **${{ github.event.inputs.version }}**
 
             **Release Notes:**
-            - Version: `v${{ github.event.inputs.version }}`
-            - Source: `${{ github.event.inputs.source_branch }}`
-            - Target: `${{ github.event.inputs.target_branch }}`
+            - Version: v${{ github.event.inputs.version }}
+            - Source: ${{ github.event.inputs.source_branch }}
+            - Target: ${{ github.event.inputs.target_branch }}
 
             Пожалуйста:
             1. Проверьте изменения
