@@ -1,3 +1,4 @@
+# deploy-prod.yml
 name: Deploy to Production
 on:
   push:
@@ -23,7 +24,7 @@ jobs:
             VERSION="latest"
             echo "Используется latest"
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $RELEASE_VERSION
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
@@ -36,17 +37,11 @@ jobs:
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
             
-            export RELEASE_VERSION="${{ steps.get_version.outputs.version }}"            
-            docker compose build --build-arg RELEASE_VERSION=$VERSION
+            RELEASE_VERSION="${{ env.RELEASE_VERSION }}"
+            echo "Deploying version: $RELEASE_VERSION"
+            
+            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend
             docker compose up -d
-
-      - name: Show logs
-        if: success()
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            docker logs glados-backend-1 --tail 50
+            
+            echo "Deployment completed!"
+            docker logs glados-backend-1
