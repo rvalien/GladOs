@@ -1,4 +1,3 @@
-# deploy-prod.yml
 name: Deploy to Production
 on:
   push:
