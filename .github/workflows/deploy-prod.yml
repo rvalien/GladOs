@@ -1,5 +1,5 @@
+# deploy-prod.yml
 name: Deploy to Production
-
 on:
   push:
     branches:
@@ -18,34 +18,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Download version artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: release-version
-          path: .
-
-      - name: Read version from artifact or inputs
+      
+      - name: Determine version to deploy
         id: get_version
         run: |
-          if [ -f version.txt ]; then
-            VERSION=$(cat version.txt)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "Found version in artifact: $VERSION"
-          elif [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-            echo "Using version from inputs: ${{ github.event.inputs.version }}"
+          # Приоритет: inputs -> repository variable -> latest
+          if [ "${{ github.event.inputs.version }}" != "latest" ] && [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "🎯 Используется версия из inputs: $VERSION"
+          elif [ "${{ vars.CURRENT_RELEASE_VERSION }}" != "" ]; then
+            VERSION="${{ vars.CURRENT_RELEASE_VERSION }}"
+            echo "📦 Используется версия из релиза: $VERSION"
           else
-            echo "version=latest" >> $GITHUB_OUTPUT
-            echo "Using latest version"
+            VERSION="latest"
+            echo "🔄 Используется latest версия"
           fi
-
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "final_version=$VERSION" >> $GITHUB_ENV
+      
+      - name: Clear release version (if used)
+        if: vars.CURRENT_RELEASE_VERSION != '' && github.event.inputs.version == ''
+        run: |
+          gh variable delete CURRENT_RELEASE_VERSION || echo "Variable already deleted or doesn't exist"
+          echo "🧹 Очищена переменная релиза после использования"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Deploy Information
         run: |
           echo "🚀 Начинаем деплой!"
           echo "Версия: ${{ steps.get_version.outputs.version }}"
-
+          echo "Trigger: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "Коммит: ${{ github.sha }}"
+          fi
+      
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -62,9 +70,9 @@ jobs:
             if [ "$VERSION" != "latest" ]; then
               echo "🏷️ Checking out tag: v$VERSION"
               if git checkout "v$VERSION"; then
-                echo "Successfully checked out tag v$VERSION"
+                echo "✅ Successfully checked out tag v$VERSION"
               else
-                echo "Failed to checkout tag v$VERSION, using latest"
+                echo "❌ Failed to checkout tag v$VERSION, using latest"
                 git pull origin release/prod
               fi
             else
@@ -79,10 +87,21 @@ jobs:
             docker compose up -d
             echo "✅ Deployment completed!"
             docker compose ps
-
+      
       - name: Notify Success
         if: success()
         run: |
           echo "🎉 Deployment успешно завершен!"
-          echo "Версия: ${{ steps.get_version.outputs.version }}"
-          docker logs glados-backend-1
+          echo "📌 Версия: ${{ steps.get_version.outputs.version }}"
+          echo "🔗 Commit: ${{ github.sha }}"
+      
+      - name: Show logs
+        if: success()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            docker logs glados-backend-1 --tail 50

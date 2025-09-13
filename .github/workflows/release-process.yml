@@ -1,5 +1,5 @@
+# release-process.yml
 name: Release Process
-
 on:
   workflow_dispatch:
     inputs:
@@ -14,7 +14,6 @@ on:
         description: 'Целевая ветка для релиза'
         required: true
         default: 'release/prod'
-
 jobs:
   release_process:
     environment: cd-prod
@@ -22,24 +21,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      
       - name: Create Release Tag
         run: |
           git config user.name "${{ secrets.GIT_USER_NAME }}"
           git config user.email "${{ secrets.GIT_USER_EMAIL }}"
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
-
-      - name: Save version to artifact
+      
+      # Сохраняем версию в repository variable
+      - name: Set release version variable
         run: |
-          echo "${{ github.event.inputs.version }}" > version.txt
-
-      - name: Upload version artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-version
-          path: version.txt
-
+          gh variable set CURRENT_RELEASE_VERSION --body "${{ github.event.inputs.version }}"
+          echo "✅ Установлена версия релиза: ${{ github.event.inputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Create Pull Request
         run: |
           gh pr create \
@@ -57,7 +54,7 @@ jobs:
             
             Пожалуйста:
             1. Проверьте изменения
-            2. Утвердите PR
+            2. Утвердьте PR
             3. Мержите в ветку ${{ github.event.inputs.target_branch }}
             
             После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }}."
