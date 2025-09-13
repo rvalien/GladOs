@@ -8,4 +8,4 @@ services:
       tags:
         - backend:${RELEASE_VERSION:-latest}
         - backend:latest
-    image: glados-backend:${RELEASE_VERSION:-latest}
+    image: backend:${RELEASE_VERSION:-latest}
