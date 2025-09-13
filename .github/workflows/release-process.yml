@@ -41,14 +41,12 @@ jobs:
             - Version: v${{ github.event.inputs.version }}
             - Source: ${{ github.event.inputs.source_branch }}
             - Target: ${{ github.event.inputs.target_branch }}
-            
-            После мержа этого PR будет автоматически запущен деплой на production.
-            
+                       
             Пожалуйста:
             1. Проверьте изменения
             2. Утвердьте PR
-            3. Мержите в ветку ${{ github.event.inputs.target_branch }}
+            3. Не унывайте
             
-            После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }}."
+            После мержа автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
