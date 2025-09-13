@@ -39,5 +39,3 @@ jobs:
             RELEASE_VERSION="${{ env.version }}"
             docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend            
             docker compose up -d
-            
-            docker logs glados-backend-1
