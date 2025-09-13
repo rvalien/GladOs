@@ -9,4 +9,4 @@ services:
         - glados-backend:${RELEASE_VERSION:-latest}
         - glados-backend:latest
     image: glados-backend:${RELEASE_VERSION:-latest}
-    container_name: glados-backend-1
+    container_name: glados-backend
