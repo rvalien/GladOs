@@ -1,0 +1,110 @@
+name: Release and Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Номер релиза (25.5, 25.5.1)'
+        required: true
+      source_branch:
+        description: 'Исходная ветка для релиза'
+        required: true
+        default: 'master'
+      target_branch:
+        description: 'Целевая ветка для релиза'
+        required: true
+        default: 'release/prod'
+
+jobs:
+  release_process:
+    environment: cd-prod
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ github.event.inputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release Tag
+        run: |
+          git config user.name "${{ secrets.GIT_USER_NAME }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}"
+
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --base ${{ github.event.inputs.target_branch }} \
+            --head ${{ github.event.inputs.source_branch }} \
+            --title "[RELEASE-v${{ github.event.inputs.version }}] Release v${{ github.event.inputs.version }}" \
+            --body "Release version **${{ github.event.inputs.version }}**
+
+            **Release Notes:**
+            - Version: v${{ github.event.inputs.version }}
+            - Source: ${{ github.event.inputs.source_branch }}
+            - Target: ${{ github.event.inputs.target_branch }}
+
+            Пожалуйста:
+            1. Проверьте изменения
+            2. Утвердите PR
+            3. Не унывайте
+
+            **⚠️После слияния, автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод**"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Release Created
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            📦 *New Release Prepared*
+            
+            🏷️ *Version*: `v${{ github.event.inputs.version }}`
+            🌿 *Source*: `${{ github.event.inputs.source_branch }}`
+            🎯 *Target*: `${{ github.event.inputs.target_branch }}`
+            
+            ⏳ *Waiting for PR approval and merge*
+            
+            [Review Pull Request](${{ github.server_url }}/${{ github.repository }}/pulls)
+
+  deploy_to_production:
+    needs: release_process
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release/prod'
+    runs-on: ubuntu-latest
+    environment: cd-prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROD_APP_PATH }}
+            git pull origin release/prod
+            
+            RELEASE_VERSION="${{ needs.release_process.outputs.version }}"
+            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend            
+            docker compose up -d
+
+      - name: Notify Deployment Success
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *Deployment Successful*
+            
+            🏷️ *Version*: `v${{ needs.release_process.outputs.version }}`
+            🎯 *Environment*: Production
+            
+            🚀 Application has been deployed successfully!
