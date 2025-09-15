@@ -23,7 +23,7 @@ jobs:
       version: ${{ github.event.inputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Create Release Tag
         run: |
@@ -78,7 +78,7 @@ jobs:
     environment: cd-prod
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.0
