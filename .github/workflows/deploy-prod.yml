@@ -35,7 +35,21 @@ jobs:
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
-            
-            RELEASE_VERSION="${{ env.version }}"
-            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend            
+
+            docker compose build --build-arg RELEASE_VERSION="${{ env.version }}" backend            
             docker compose up -d
+
+
+      - name: Notify Deployment Success
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *Deployment Successful*
+
+            🏷️ *Version*: `v${{ env.version }}`
+            🎯 *Environment*: Production
+
+            🚀 Application has been deployed successfully!
