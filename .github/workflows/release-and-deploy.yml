@@ -1,4 +1,5 @@
-name: Release Process
+name: Release and Deploy to Production
+
 on:
   workflow_dispatch:
     inputs:
@@ -18,10 +19,12 @@ jobs:
   release_process:
     environment: cd-prod
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ github.event.inputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      
+
       - name: Create Release Tag
         run: |
           git config user.name "${{ secrets.GIT_USER_NAME }}"
@@ -29,7 +32,7 @@ jobs:
           git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
           git push origin "v${{ github.event.inputs.version }}"
 
-      - name: Create Pull Request with version in title
+      - name: Create Pull Request
         run: |
           gh pr create \
             --base ${{ github.event.inputs.target_branch }} \
@@ -51,7 +54,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Notify Release Created
         uses: appleboy/telegram-action@master
         with:
@@ -68,3 +70,41 @@ jobs:
             ⏳ *Waiting for PR approval and merge*
             
             [Review Pull Request](${{ github.server_url }}/${{ github.repository }}/pulls)
+
+  deploy_to_production:
+    needs: release_process
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release/prod'
+    runs-on: ubuntu-latest
+    environment: cd-prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.PROD_APP_PATH }}
+            git pull origin release/prod
+            
+            RELEASE_VERSION="${{ needs.release_process.outputs.version }}"
+            docker compose build --build-arg RELEASE_VERSION=$RELEASE_VERSION backend            
+            docker compose up -d
+
+      - name: Notify Deployment Success
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *Deployment Successful*
+            
+            🏷️ *Version*: `v${{ needs.release_process.outputs.version }}`
+            🎯 *Environment*: Production
+            
+            🚀 Application has been deployed successfully!
