@@ -7,3 +7,6 @@ services:
         RELEASE_VERSION: ${RELEASE_VERSION:-latest}
     image: glados-backend:${RELEASE_VERSION:-latest}
     container_name: glados-backend
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - WEATHER_TOKEN=${WEATHER_TOKEN}

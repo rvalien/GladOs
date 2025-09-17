@@ -1,14 +1,15 @@
 [tool.poetry]
 name = "glados"
 version = "0.1.0"
+package-mode = false
 description = "my personal rutine helper"
 authors = ["Valien R. <34721834+rvalien@users.noreply.github.com>"]
 license = "MIT License"
 
 [tool.poetry.dependencies]
-python = "3.12.1"
-aiogram = "^3.2.0"
-asyncpg = "^0.25.0"
+python = "3.11.9"
+aiogram = "^3.22.0"
+asyncpg = "^0.30.0"
 aioschedule = "^0.5.2"
 gino = "^1.0.1"
 aiohttp = "^3.9.1"
