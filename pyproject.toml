@@ -7,7 +7,7 @@ authors = ["Valien R. <34721834+rvalien@users.noreply.github.com>"]
 license = "MIT License"
 
 [tool.poetry.dependencies]
-python = "3.11.9"
+python = "^3.13"
 aiogram = "^3.22.0"
 asyncpg = "^0.30.0"
 aioschedule = "^0.5.2"
