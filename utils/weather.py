@@ -22,8 +22,13 @@ async def get_weather(weather_token: str, city_id: int = 550280) -> str:
     """
     async with aiohttp.ClientSession() as session:
         async with session.get(
-                url="https://api.openweathermap.org/data/2.5/weather",
-                params={"id": city_id, "units": "metric", "lang": "ru", "APPID": weather_token},
+            url="https://api.openweathermap.org/data/2.5/weather",
+            params={
+                "id": city_id,
+                "units": "metric",
+                "lang": "ru",
+                "APPID": weather_token,
+            },
         ) as response:
             try:
                 data = await response.json()

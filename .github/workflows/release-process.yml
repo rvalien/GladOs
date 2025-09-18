@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      
+
       - name: Create Release Tag
         run: |
           git config user.name "${{ secrets.GIT_USER_NAME }}"
@@ -60,11 +60,11 @@ jobs:
           format: markdown
           message: |
             📦 *New Release Prepared*
-            
+
             🏷️ *Version*: `v${{ github.event.inputs.version }}`
             🌿 *Source*: `${{ github.event.inputs.source_branch }}`
             🎯 *Target*: `${{ github.event.inputs.target_branch }}`
-            
+
             ⏳ *Waiting for PR approval and merge*
-            
+
             [Review Pull Request](${{ github.server_url }}/${{ github.repository }}/pulls)
