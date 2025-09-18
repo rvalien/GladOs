@@ -11,7 +11,7 @@ from aiogram.filters import CommandStart
 from utils import weather
 
 
-VERSION = os.environ.get('RELEASE_VERSION', '1.1')
+VERSION = os.environ['RELEASE_VERSION']
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
 storage = MemoryStorage()
