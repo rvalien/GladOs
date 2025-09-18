@@ -9,4 +9,4 @@ services:
     container_name: glados-backend
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - WEATHER_TOKEN=${WEATHER_TOKEN}
+      - RELEASE_VERSION=${RELEASE_VERSION} - WEATHER_TOKEN=${WEATHER_TOKEN}

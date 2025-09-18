@@ -11,12 +11,13 @@ from aiogram.filters import CommandStart
 from utils import weather
 
 
-VERSION = os.environ.get('RELEASE_VERSION', '1.1')
+VERSION = os.environ["RELEASE_VERSION"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 dp.include_router(weather.router)
+
 
 @dp.message(CommandStart())
 async def send_welcome(message: types.Message):
@@ -25,8 +26,11 @@ async def send_welcome(message: types.Message):
 
 
 async def main() -> None:
-    bot = Bot(token=TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(
+        token=TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
