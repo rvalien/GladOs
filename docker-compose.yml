@@ -10,5 +10,3 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - WEATHER_TOKEN=${WEATHER_TOKEN}
-    env_file:
-      - .env
