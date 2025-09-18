@@ -11,10 +11,8 @@ from aiogram.filters import CommandStart
 from utils import weather
 
 
-database = os.environ["DATABASE_URL"]
-delay = int(os.environ["DELAY"])
-bp_user = os.environ["BP_USER"]
-VERSION = os.environ['RELEASE_VERSION']
+VERSION = os.environ.get('RELEASE_VERSION', '1.1')
+TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -27,8 +25,7 @@ async def send_welcome(message: types.Message):
 
 
 async def main() -> None:
-    telegram_token = os.environ["TELEGRAM_TOKEN"]
-    bot = Bot(token=telegram_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(token=TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
