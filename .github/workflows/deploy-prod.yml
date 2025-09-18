@@ -37,7 +37,7 @@ jobs:
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
 
-            export TELEGRAM_TOKEN="$BOT_TOKEN"
+            export TELEGRAM_TOKEN="$TELEGRAM_TOKEN"
             export WEATHER_TOKEN="$WEATHER_TOKEN" 
             export RELEASE_VERSION="${{ env.version }}"
             
