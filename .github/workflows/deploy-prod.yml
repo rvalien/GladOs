@@ -38,7 +38,9 @@ jobs:
 
             docker compose build --build-arg RELEASE_VERSION="${{ env.version }}" backend            
             docker compose up -d
-
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          WEATHER_TOKEN: ${{ secrets.WEATHER_TOKEN }}
 
       - name: Notify Deployment Success
         uses: appleboy/telegram-action@master
