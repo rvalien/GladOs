@@ -32,15 +32,22 @@ jobs:
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          envs: TELEGRAM_TOKEN,WEATHER_TOKEN,RELEASE_VERSION
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
 
-            docker compose build --build-arg RELEASE_VERSION="${{ env.version }}" backend            
+            export TELEGRAM_TOKEN="$BOT_TOKEN"
+            export WEATHER_TOKEN="$WEATHER_TOKEN" 
+            export RELEASE_VERSION="${{ env.version }}"
+            
+            # Строим и запускаем с переданными переменными
+            docker compose build --build-arg RELEASE_VERSION="$RELEASE_VERSION" backend
             docker compose up -d
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           WEATHER_TOKEN: ${{ secrets.WEATHER_TOKEN }}
+          RELEASE_VERSION: ${{ env.version }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
       - name: Notify Deployment Success
         uses: appleboy/telegram-action@master

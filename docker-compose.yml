@@ -8,5 +8,5 @@ services:
     image: glados-backend:${RELEASE_VERSION:-latest}
     container_name: glados-backend
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - WEATHER_TOKEN=${WEATHER_TOKEN}
