@@ -2,26 +2,37 @@ import asyncio
 import logging
 import os
 import sys
-from aiogram import Bot, types, Dispatcher
+from aiogram import Bot, types, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 
-from utils import weather
-
+from utils import weather, admin
 
 VERSION = os.environ["RELEASE_VERSION"]
-TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
+TELEGRAM_TOKEN = os.environ["TEST_TELEGRAM_TOKEN"]
+ADMIN_IDS = os.environ["ADMIN_IDS"]
+
+router = Router()
+
+
+@router.message(Command("help"))
+async def help_command(message: types.Message):
+    print(f"Получена команда help от {message.from_user.id}")
+    await message.answer("✅ Помощь работает!")
+
 
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+dp.include_router(router)
+dp.include_router(admin.help_router)
 dp.include_router(weather.router)
+dp.include_router(admin.admin_router)
 
 
 @dp.message(CommandStart())
 async def send_welcome(message: types.Message):
-    logging.warning("Starting connection.")
     await message.reply(f"Hello, i'm GladOS. v{VERSION} beep boop...\n")
 
 
