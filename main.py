@@ -11,7 +11,7 @@ from aiogram.filters import Command, CommandStart
 from utils import weather, admin
 
 VERSION = os.environ["RELEASE_VERSION"]
-TELEGRAM_TOKEN = os.environ["TEST_TELEGRAM_TOKEN"]
+TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
 router = Router()
 
