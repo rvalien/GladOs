@@ -12,7 +12,6 @@ from utils import weather, admin
 
 VERSION = os.environ["RELEASE_VERSION"]
 TELEGRAM_TOKEN = os.environ["TEST_TELEGRAM_TOKEN"]
-ADMIN_IDS = os.environ["ADMIN_IDS"]
 
 router = Router()
 

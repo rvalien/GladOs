@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: TELEGRAM_TOKEN,WEATHER_TOKEN,RELEASE_VERSION
+          envs: TELEGRAM_TOKEN,WEATHER_TOKEN,RELEASE_VERSION,ADMIN_IDS
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
@@ -48,6 +48,7 @@ jobs:
           WEATHER_TOKEN: ${{ secrets.WEATHER_TOKEN }}
           RELEASE_VERSION: ${{ env.version }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ADMIN_IDS: ${{ secrets.ADMIN_IDS }}
 
       - name: Notify Deployment Success
         uses: appleboy/telegram-action@master
