@@ -23,5 +23,4 @@ Weather in my hometown.
 set environment variables
 `TELEGRAM_TOKEN`- bot token
 `WEATHER_TOKEN` - token for `openweathermap.org` api
-`DELAY`- seconds for repeating background tasks
 `ADMIN`- telegram id to notifications
