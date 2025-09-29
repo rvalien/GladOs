@@ -31,6 +31,7 @@ jobs:
     - name: Run pytest with coverage
       run: |
         docker run --rm \
+          --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}:/workspace \
           myapp:test \
           sh -c "pytest --cov=. --cov-report=xml --cov-report=html --cov-report=term && cp .coverage /workspace/.coverage"
