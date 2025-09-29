@@ -10,6 +10,7 @@ license = "MIT License"
 python = "^3.13"
 aiogram = "^3.22.0"
 pytest = "^8.4.2"
+pytest-cov = "^7.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.3.0"

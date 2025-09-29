@@ -36,6 +36,10 @@ jobs:
       - name: Build backend image
         run: docker build -t pytest-app .
 
+      - name: Run tests
+        run: |
+          docker run pytest-app pytest
+
       - name: Run tests with coverage
         run: |
           docker run pytest-app pytest --cov=. --cov-report=xml
