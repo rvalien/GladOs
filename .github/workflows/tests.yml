@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     needs: filter-changes
-    if: ${{ needs.filter_changes.outputs.changed_app_code == 'true' }}
+    if: ${{ needs.filter-changes.outputs.changed_app_code == 'true' }}
     permissions:
       contents: read
 
