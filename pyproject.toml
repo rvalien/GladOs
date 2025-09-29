@@ -9,7 +9,17 @@ license = "MIT License"
 [tool.poetry.dependencies]
 python = "^3.13"
 aiogram = "^3.22.0"
+pytest = "^8.4.2"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.3.0"
 ruff = "^0.13.0"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+    "tests/test.py"
+]

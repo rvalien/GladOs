@@ -1,0 +1,101 @@
+name: CI tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  filter-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_app_code: ${{ steps.filter.outputs.changed_app_code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Filter changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters:
+            changed_app_code:
+              - '**/*.py'
+              - '**/*.html'
+              - '**/*.js'
+              - '**/*.css'
+              - '**/*.json'
+
+  tests:
+    name: run tests
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+#    environment: ci-tests
+    needs: filter-changes
+    if: ${{ needs.filter_changes.outputs.changed_app_code == 'true' }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+
+      - name: Build backend
+        run: docker build -t pytest-app .
+
+      - name: Run tests with pytest
+        run: docker run pytest-app pytest
+
+
+      - name: Run tests
+        env:
+          COVERAGE_FILE: /tmp/.coverage
+        run: docker exec pytest-app pytest
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: .coverage_${{ github.run_id }}
+          path: /home/runner/work/back/back/coverage/.coverage
+          retention-days: 1
+          include-hidden-files: true
+
+  coverage:
+    name: tests coverage
+    runs-on: ubuntu-latest
+    needs: tests
+    if: ${{ needs.tests.result == 'success' }}
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: .coverage_${{ github.run_id }}
+
+      - name: Coverage comment
+        id: coverage_comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Store Pull Request comment to be posted
+        uses: actions/upload-artifact@v4
+        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          name: python-coverage-comment-action
+          path: python-coverage-comment-action.txt
