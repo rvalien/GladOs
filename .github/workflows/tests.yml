@@ -41,15 +41,25 @@ jobs:
             pytest-app \
             pytest --cov=. --cov-report=xml --cov-report=term
 
+          echo "=== Searching for coverage files in container ==="
+          docker exec pytest-container find / -name ".coverage*" 2>/dev/null || true
+          docker exec pytest-container find / -name "coverage.xml" 2>/dev/null || true
+
       - name: Copy coverage files from container
         if: success()
         run: |
           mkdir -p coverage-output
-          docker cp pytest-container:/app/coverage.xml ./coverage-output/
-          docker cp pytest-container:/app/.coverage ./coverage-output/
+          # Попробуем разные пути
+          docker cp pytest-container:/app/.coverage ./coverage-output/ || \
+          docker cp pytest-container:/.coverage ./coverage-output/ || \
+          echo "Warning: .coverage not found"
+
+          docker cp pytest-container:/app/coverage.xml ./coverage-output/ || \
+          docker cp pytest-container:/coverage.xml ./coverage-output/ || \
+          echo "Warning: coverage.xml not found"
+
           echo "Coverage files copied:"
           ls -la ./coverage-output/
-
       - name: Cleanup container
         if: always()
         run: docker rm pytest-container || true
@@ -77,7 +87,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: coverage-data
           path: .
