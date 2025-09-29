@@ -24,3 +24,6 @@ set environment variables
 `TELEGRAM_TOKEN`- bot token
 `WEATHER_TOKEN` - token for `openweathermap.org` api
 `ADMIN`- telegram id to notifications
+
+
+add pytests to workflow
