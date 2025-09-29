@@ -33,10 +33,16 @@ jobs:
         docker run --rm \
           --user $(id -u):$(id -g) \
           -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          -e COVERAGE_FILE=/workspace/.coverage \
+          -e COVERAGE_FILE=.coverage \
           myapp:test \
-          pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
+          sh -c "cd /workspace && cp -r /app/* . 2>/dev/null || true && pytest --cov=/app --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term"
+
+    - name: List coverage files (debug)
+      run: |
+        echo "Files in workspace:"
+        ls -la ${{ github.workspace }}
+        echo "Looking for .coverage* files:"
+        find ${{ github.workspace }} -name ".coverage*" -type f
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
