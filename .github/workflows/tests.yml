@@ -36,19 +36,15 @@ jobs:
       - name: Build backend image
         run: docker build -t pytest-app .
 
-      - name: Run tests
-        run: |
-          docker run pytest-app pytest
-
       - name: Run tests with coverage
         run: |
-          docker run pytest-app pytest --cov=. --cov-report=xml
+          docker run --rm -v $(pwd):/output pytest-app sh -c "pytest --cov=. --cov-report=xml && cp coverage.xml /output/"
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-data
-          path: /app/coverage.xml
+          path: coverage.xml
           retention-days: 1
 
   coverage:
