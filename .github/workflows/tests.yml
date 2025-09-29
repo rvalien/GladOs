@@ -37,17 +37,18 @@ jobs:
         run: docker build -t pytest-app .
 
       - name: Run tests with coverage
-        env:
-          COVERAGE_FILE: /tmp/.coverage
-        run: docker run pytest-app pytest --cov=. --cov-report=xml
+        run: |
+          docker run \
+            -v ${{ github.workspace }}/coverage-data:/app/coverage \
+            pytest-app \
+            pytest --cov=. --cov-report=xml:/app/coverage/coverage.xml --cov-report=term
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: .coverage_${{ github.run_id }}
-          path: /home/runner/work/back/back/coverage/.coverage
+          name: coverage-data
+          path: ${{ github.workspace }}/coverage-data/
           retention-days: 1
-          include-hidden-files: true
 
   coverage:
     name: tests coverage
@@ -60,20 +61,24 @@ jobs:
       pull-requests: write
       contents: write
       actions: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: coverage-data
+          path: ./coverage-data
 
       - name: Coverage comment
         id: coverage_comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_DATA_BRANCH: main  # или master
+          COVERAGE_PATH: ./coverage-data
 
       - name: Store Pull Request comment to be posted
         uses: actions/upload-artifact@v4
