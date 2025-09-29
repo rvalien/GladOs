@@ -38,7 +38,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          docker run --rm -v $(pwd):/output pytest-app sh -c "pytest --cov=. --cov-report=xml && cp coverage.xml /output/"
+          docker run --rm -u $(id -u):$(id -g) -v $(pwd):/output pytest-app sh -c "pytest --cov=. --cov-report=xml && cp coverage.xml /output/"
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
