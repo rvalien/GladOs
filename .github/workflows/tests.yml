@@ -38,7 +38,6 @@ jobs:
     name: run tests
     timeout-minutes: 20
     runs-on: ubuntu-latest
-#    environment: ci-tests
     needs: filter-changes
     if: ${{ needs.filter_changes.outputs.changed_app_code == 'true' }}
     permissions:
@@ -48,18 +47,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build backend
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build backend image
         run: docker build -t pytest-app .
 
       - name: Run tests with pytest
-        run: docker run pytest-app pytest
-
-
-      - name: Run tests
         env:
-          COVERAGE_FILE: /tmp/.coverage
-        run: docker exec pytest-app pytest
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DJANGO_SUPERUSER_USERNAME: ${{ secrets.DJANGO_SUPERUSER_USERNAME }}
+          DJANGO_SUPERUSER_PASSWORD: ${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
+        run: docker run pytest-app pytest
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
