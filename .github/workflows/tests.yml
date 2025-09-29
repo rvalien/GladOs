@@ -29,17 +29,27 @@ jobs:
       run: docker build -t myapp:test .
 
     - name: Run pytest with coverage
-      env:
-        COVERAGE_FILE: /tmp/.coverage
       run: |
-        docker run --rm myapp:test pytest --cov=. --cov-report=xml
+        docker run --rm \
+          -v ${{ github.workspace }}:/workspace \
+          -w /workspace \
+          -e COVERAGE_FILE=/workspace/.coverage \
+          myapp:test \
+          pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
 
-    - name: Upload coverage artifact
+    - name: Verify coverage file
+      run: |
+        ls -la .coverage || echo "Coverage file not found!"
+        test -f .coverage || exit 1
+
+    - name: Upload coverage data
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: .coverage_${{ github.run_id }}
-        path: /home/runner/work/GladOs/GladOs/.coverage
+        path: .coverage
         retention-days: 1
+        if-no-files-found: error
         include-hidden-files: true
 
   coverage:
