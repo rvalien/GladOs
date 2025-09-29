@@ -46,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: .coverage_${{ github.run_id }}
-          path: /home/runner/work/back/back/coverage/.coverage
+          path:  /tmp/.coverage
           retention-days: 1
           include-hidden-files: true
 
