@@ -1,3 +1,22 @@
+name: CI tests
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+  workflow_dispatch:
+
 jobs:
   tests:
     name: run tests
