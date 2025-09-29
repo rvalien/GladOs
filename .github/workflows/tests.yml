@@ -37,15 +37,17 @@ jobs:
         run: docker build -t pytest-app .
 
       - name: Run tests with coverage
-        run: |
-          docker run --rm -u $(id -u):$(id -g) -v $(pwd):/output pytest-app sh -c "pytest --cov=. --cov-report=xml && cp coverage.xml /output/"
+        env:
+          COVERAGE_FILE: /tmp/.coverage
+        run: docker run pytest-app pytest --cov=. --cov-report=xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
-          path: coverage.xml
+          name: .coverage_${{ github.run_id }}
+          path: /home/runner/work/back/back/coverage/.coverage
           retention-days: 1
+          include-hidden-files: true
 
   coverage:
     name: tests coverage
