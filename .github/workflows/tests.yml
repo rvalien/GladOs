@@ -40,7 +40,7 @@ jobs:
         env:
           COVERAGE_FILE: /tmp/.coverage
         run: |
-          docker run --rm pytest-app pytest
+          docker run --rm pytest-app pytest --cov=. --cov-report=xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
