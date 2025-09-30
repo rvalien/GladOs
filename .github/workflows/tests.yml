@@ -30,6 +30,11 @@ jobs:
       with:
         python-version: '3.13'
 
+    - name: Setup Poetry
+      uses: abatilo/actions-poetry@v2
+      with:
+        poetry-version: '1.8'
+
     - name: Generate Docker cache key
       id: docker_cache
       run: |
@@ -91,13 +96,16 @@ jobs:
     - name: Setup Python dependencies for coverage
       run: |
         pip install coverage[toml] pytest pytest-cov
-        # Устанавливаем зависимости проекта
-        pip install -e .
+
+    - name: Install project dependencies with Poetry
+      run: |
+        poetry install --no-dev
+      working-directory: ${{ github.workspace }}
 
     - name: Run tests with coverage (outside Docker)
       run: |
-        coverage erase
-        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
+        poetry run coverage erase
+        poetry run pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
         # coverage файл будет создан автоматически
 
     - name: Verify coverage file
