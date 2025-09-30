@@ -74,21 +74,27 @@ jobs:
         docker save myapp:test -o /tmp/docker-image.tar
         echo "Built and saved Docker image"
 
-    - name: Run tests in container and copy coverage file
+    - name: Create coverage directory
+      run: |
+        mkdir -p coverage_data
+
+    - name: Run tests in container with explicit coverage file path
       run: |
         # Запускаем контейнер в фоне
         CONTAINER_ID=$(docker run -d \
           -v ${{ github.workspace }}:/workspace \
+          -v ${{ github.workspace }}/coverage_data:/coverage_data \
           -w /workspace \
           myapp:test \
           tail -f /dev/null)
 
         echo "Container ID: $CONTAINER_ID"
 
-        # Выполняем тесты в контейнере
+        # Выполняем тесты в контейнере, указывая путь к coverage файлу во внешней директории
         if docker exec $CONTAINER_ID bash -c "
+          export COVERAGE_FILE=/coverage_data/.coverage &&
           coverage erase &&
-          pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
+          pytest --cov=. --cov-report=xml:/coverage_data/coverage.xml --cov-report=html:/coverage_data/htmlcov --cov-report=term
         "; then
           echo "Tests completed successfully"
           TEST_EXIT_CODE=0
@@ -97,41 +103,20 @@ jobs:
           TEST_EXIT_CODE=1
         fi
 
-        # Копируем все файлы coverage из контейнера (они могут иметь разные имена)
-        docker exec $CONTAINER_ID bash -c "ls -la /workspace/.coverage*" 2>/dev/null || echo "No coverage files found in container"
-        docker cp $CONTAINER_ID:/workspace/.coverage* . 2>/dev/null || echo "No coverage files to copy"
+        # Копируем файлы из директории coverage_data
+        cp -f coverage_data/.coverage* . 2>/dev/null || echo "No coverage files copied"
 
-        # Также копируем coverage файлы, которые могут быть в корне
-        docker cp $CONTAINER_ID:/workspace/.coverage* . 2>/dev/null || echo "Trying to copy from root"
-
-        # Пытаемся найти и скопировать любой файл .coverage в контейнере
-        COVERAGE_FILES=$(docker exec $CONTAINER_ID bash -c "find /workspace -name '.coverage*' 2>/dev/null || echo ''")
-        if [ -n "$COVERAGE_FILES" ]; then
-          echo "Found coverage files: $COVERAGE_FILES"
-          for file in $COVERAGE_FILES; do
-            filename=$(basename "$file")
-            docker cp $CONTAINER_ID:"$file" "./$filename"
-            echo "Copied $filename"
-          done
-
-          # Если есть несколько файлов .coverage, объединим их в один
-          ls -la .coverage* 2>/dev/null
-          COVERAGE_FILE_COUNT=$(ls -1 .coverage* 2>/dev/null | wc -l)
-          if [ $COVERAGE_FILE_COUNT -gt 1 ]; then
-            echo "Found multiple coverage files, combining them..."
-            # Используем контейнер для объединения файлов
-            docker cp .coverage* $CONTAINER_ID:/workspace/
-            docker exec $CONTAINER_ID bash -c "
-              coverage combine .coverage*
-              mv .coverage /workspace/.coverage_combined
-            "
-            docker cp $CONTAINER_ID:/workspace/.coverage_combined ./.coverage
-          elif [ $COVERAGE_FILE_COUNT -eq 1 ]; then
-            # Переименовываем первый найденный файл в .coverage
-            mv .coverage* .coverage
-          fi
+        # Переименовываем файл если он есть
+        if [ -f "coverage_data/.coverage" ]; then
+          cp coverage_data/.coverage ./.coverage
         else
-          echo "No coverage files found in container"
+          # Проверяем и копируем другие файлы .coverage
+          for file in coverage_data/.coverage*; do
+            if [ -f "$file" ]; then
+              cp "$file" ./.coverage
+              break
+            fi
+          done
         fi
 
         # Останавливаем контейнер
