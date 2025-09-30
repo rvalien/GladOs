@@ -26,96 +26,37 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.13'
 
     - name: Setup Poetry
-      uses: abatilo/actions-poetry@v2
+      uses: abatilo/actions-poetry@v4
       with:
         poetry-version: '1.8'
-
-    - name: Generate Docker cache key
-      id: docker_cache
-      run: |
-        # Хэшируем Dockerfile и pyproject.toml (и poetry.lock если есть)
-        FILES_TO_HASH="Dockerfile"
-
-        # Проверяем наличие файлов и добавляем их к списку для хэширования
-        if [ -f "pyproject.toml" ]; then
-            FILES_TO_HASH="$FILES_TO_HASH pyproject.toml"
-        fi
-        if [ -f "poetry.lock" ]; then
-            FILES_TO_HASH="$FILES_TO_HASH poetry.lock"
-        fi
-
-        # Вычисляем общий хэш для файлов зависимостей и Dockerfile
-        TOTAL_HASH=$(echo $FILES_TO_HASH | xargs sha256sum | sha256sum | cut -d' ' -f1)
-
-        # Также добавляем хэш от основных Python файлов (если они изменились - тоже пересобираем)
-        PYTHON_FILES_HASH=$(find . -name "*.py" -not -path "./.*" -not -path "./venv/*" -not -path "./.venv/*" -not -path "./.git/*" -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
-
-        CACHE_KEY="docker-image-${TOTAL_HASH}-${PYTHON_FILES_HASH}"
-        echo "cache_key=${CACHE_KEY}" >> $GITHUB_OUTPUT
-        echo "Cache key: ${CACHE_KEY}"
-
-    - name: Cache Docker image
-      uses: actions/cache@v4
-      id: cache-docker
-      with:
-        path: /tmp/docker-image.tar
-        key: ${{ steps.docker_cache.outputs.cache_key }}
-
-    - name: Load cached Docker image
-      if: steps.cache-docker.outputs.cache-hit == 'true'
-      run: |
-        if [ -f /tmp/docker-image.tar ]; then
-            docker load -i /tmp/docker-image.tar
-            echo "Loaded cached image"
-        else
-            echo "Cache file not found, building image"
-        fi
-
-    - name: Build Docker image
-      if: steps.cache-docker.outputs.cache-hit != 'true'
-      run: |
-        docker build -t myapp:test .
-        mkdir -p /tmp
-        docker save myapp:test -o /tmp/docker-image.tar
-        echo "Built and saved Docker image"
-
-    - name: Test with Docker
-      run: |
-        # Просто запускаем тесты в Docker для проверки работоспособности
-        docker run \
-          -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          myapp:test \
-          pytest
 
     - name: Setup Python dependencies for coverage
       run: |
         pip install coverage[toml] pytest pytest-cov
 
-    - name: Install project dependencies with Poetry
+    - name: Install project dependencies
       run: |
         poetry install --no-dev
       working-directory: ${{ github.workspace }}
 
-    - name: Run tests with coverage (outside Docker)
+    - name: Run tests with coverage
       run: |
         poetry run coverage erase
         poetry run pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
-        # coverage файл будет создан автоматически
 
     - name: Verify coverage file
       run: |
         ls -la .coverage || echo "Coverage file not found!"
-        test -f .coverage || echo "Warning: Coverage file not found!" || exit 0
+        test -f .coverage || echo "Warning: Coverage file not found!"
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
-      if: always()
+      if: success() || failure()
       with:
         name: .coverage_${{ github.run_id }}
         path: .coverage
@@ -127,9 +68,7 @@ jobs:
     name: Coverage Report
     runs-on: ubuntu-latest
     needs: test
-    if: |
-      needs.test.result == 'success' &&
-      needs.test.conclusion == 'success'
+    if: always()
     permissions:
       pull-requests: write
       contents: write
