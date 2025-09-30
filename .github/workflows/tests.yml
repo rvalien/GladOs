@@ -25,33 +25,70 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
+    - name: Generate Docker cache key
+      id: docker_cache
+      run: |
+        # Хэшируем Dockerfile и pyproject.toml (и poetry.lock если есть)
+        FILES_TO_HASH="Dockerfile"
+
+        # Проверяем наличие файлов и добавляем их к списку для хэширования
+        if [ -f "pyproject.toml" ]; then
+            FILES_TO_HASH="$FILES_TO_HASH pyproject.toml"
+        fi
+        if [ -f "poetry.lock" ]; then
+            FILES_TO_HASH="$FILES_TO_HASH poetry.lock"
+        fi
+
+        # Вычисляем общий хэш для файлов зависимостей и Dockerfile
+        TOTAL_HASH=$(echo $FILES_TO_HASH | xargs sha256sum | sha256sum | cut -d' ' -f1)
+
+        # Также добавляем хэш от основных Python файлов (если они изменились - тоже пересобираем)
+        PYTHON_FILES_HASH=$(find . -name "*.py" -not -path "./.*" -not -path "./venv/*" -not -path "./.venv/*" -not -path "./.git/*" -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+
+        CACHE_KEY="docker-image-${TOTAL_HASH}-${PYTHON_FILES_HASH}"
+        echo "cache_key=${CACHE_KEY}" >> $GITHUB_OUTPUT
+        echo "Cache key: ${CACHE_KEY}"
+
+    - name: Cache Docker image
+      uses: actions/cache@v4
+      id: cache-docker
+      with:
+        path: /tmp/docker-image.tar
+        key: ${{ steps.docker_cache.outputs.cache_key }}
+
+    - name: Load cached Docker image
+      if: steps.cache-docker.outputs.cache-hit == 'true'
+      run: |
+        if [ -f /tmp/docker-image.tar ]; then
+            docker load -i /tmp/docker-image.tar
+            echo "Loaded cached image"
+        else
+            echo "Cache file not found, building image"
+        fi
+
     - name: Build Docker image
-      run: docker build -t myapp:test .
+      if: steps.cache-docker.outputs.cache-hit != 'true'
+      run: |
+        docker build -t myapp:test .
+        mkdir -p /tmp
+        docker save myapp:test -o /tmp/docker-image.tar
+        echo "Built and saved Docker image"
 
     - name: Run pytest with coverage
       run: |
-        # Запускаем контейнер в фоне
-        docker run -d --name test_container \
+        # Удаляем старый файл coverage если есть
+        rm -f .coverage
+
+        # Запускаем тесты с указанием конкретного файла coverage
+        docker run \
           -v ${{ github.workspace }}:/workspace \
           -w /workspace \
+          -e COVERAGE_FILE=/workspace/.coverage \
           myapp:test \
-          tail -f /dev/null
-
-        # Выполняем pytest в контейнере
-        docker exec test_container bash -c "
-          pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
-        " || exit_code=$?
-
-        # Копируем .coverage файл из контейнера наружу
-        docker cp test_container:/workspace/.coverage . || echo "Coverage file not found in container"
-
-        # Останавливаем и удаляем контейнер
-        docker stop test_container
-        docker rm test_container
-
-        # Выходим с кодом ошибки если тесты не прошли
-        [ -n "$exit_code" ] && exit $exit_code
-
+          bash -c "
+            coverage erase &&
+            pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
+          "
 
     - name: Verify coverage file
       run: |
