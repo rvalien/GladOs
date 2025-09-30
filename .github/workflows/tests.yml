@@ -30,17 +30,34 @@ jobs:
 
     - name: Run pytest with coverage
       run: |
-        docker run \
+        # Запускаем контейнер в фоне
+        docker run -d --name test_container \
           -v ${{ github.workspace }}:/workspace \
           -w /workspace \
-          -e COVERAGE_FILE=/workspace/.coverage \
           myapp:test \
+          tail -f /dev/null
+
+        # Выполняем pytest в контейнере
+        docker exec test_container bash -c "
           pytest --cov=. --cov-report=xml:/workspace/coverage.xml --cov-report=html:/workspace/htmlcov --cov-report=term
+        " || exit_code=$?
+
+        # Копируем .coverage файл из контейнера наружу
+        docker cp test_container:/workspace/.coverage . || echo "Coverage file not found in container"
+
+        # Останавливаем и удаляем контейнер
+        docker stop test_container
+        docker rm test_container
+
+        # Выходим с кодом ошибки если тесты не прошли
+        [ -n "$exit_code" ] && exit $exit_code
+
 
     - name: Verify coverage file
       run: |
         ls -la .coverage || echo "Coverage file not found!"
         test -f .coverage || exit 1
+
 
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
