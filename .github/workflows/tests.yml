@@ -25,6 +25,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
     - name: Generate Docker cache key
       id: docker_cache
       run: |
@@ -74,57 +79,26 @@ jobs:
         docker save myapp:test -o /tmp/docker-image.tar
         echo "Built and saved Docker image"
 
-    - name: Create coverage directory
+    - name: Test with Docker
       run: |
-        mkdir -p coverage_data
-
-    - name: Run tests in container with explicit coverage file path
-      run: |
-        # Запускаем контейнер в фоне
-        CONTAINER_ID=$(docker run -d \
+        # Просто запускаем тесты в Docker для проверки работоспособности
+        docker run \
           -v ${{ github.workspace }}:/workspace \
-          -v ${{ github.workspace }}/coverage_data:/coverage_data \
           -w /workspace \
           myapp:test \
-          tail -f /dev/null)
+          pytest
 
-        echo "Container ID: $CONTAINER_ID"
+    - name: Setup Python dependencies for coverage
+      run: |
+        pip install coverage[toml] pytest pytest-cov
+        # Устанавливаем зависимости проекта
+        pip install -e .
 
-        # Выполняем тесты в контейнере, указывая путь к coverage файлу во внешней директории
-        if docker exec $CONTAINER_ID bash -c "
-          export COVERAGE_FILE=/coverage_data/.coverage &&
-          coverage erase &&
-          pytest --cov=. --cov-report=xml:/coverage_data/coverage.xml --cov-report=html:/coverage_data/htmlcov --cov-report=term
-        "; then
-          echo "Tests completed successfully"
-          TEST_EXIT_CODE=0
-        else
-          echo "Tests failed"
-          TEST_EXIT_CODE=1
-        fi
-
-        # Копируем файлы из директории coverage_data
-        cp -f coverage_data/.coverage* . 2>/dev/null || echo "No coverage files copied"
-
-        # Переименовываем файл если он есть
-        if [ -f "coverage_data/.coverage" ]; then
-          cp coverage_data/.coverage ./.coverage
-        else
-          # Проверяем и копируем другие файлы .coverage
-          for file in coverage_data/.coverage*; do
-            if [ -f "$file" ]; then
-              cp "$file" ./.coverage
-              break
-            fi
-          done
-        fi
-
-        # Останавливаем контейнер
-        docker stop $CONTAINER_ID
-        docker rm $CONTAINER_ID
-
-        # Выходим с кодом ошибки если тесты не прошли
-        [ $TEST_EXIT_CODE -ne 0 ] && exit $TEST_EXIT_CODE
+    - name: Run tests with coverage (outside Docker)
+      run: |
+        coverage erase
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
+        # coverage файл будет создан автоматически
 
     - name: Verify coverage file
       run: |
