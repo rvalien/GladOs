@@ -30,7 +30,7 @@ jobs:
 
     - name: Run pytest with coverage
       run: |
-        docker run --rm \
+        docker run \
           -v ${{ github.workspace }}:/workspace \
           -w /workspace \
           -e COVERAGE_FILE=/workspace/.coverage \
