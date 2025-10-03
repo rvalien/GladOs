@@ -1,0 +1,65 @@
+name: CI tests
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Setup Poetry
+      uses: abatilo/actions-poetry@v4
+      with:
+        poetry-version: '2.2'
+
+    - name: Setup Python dependencies for coverage
+      run: |
+        pip install coverage[toml] pytest pytest-cov
+
+    - name: Install project dependencies
+      run: |
+        poetry install --only main
+      working-directory: ${{ github.workspace }}
+
+    - name: Run tests with coverage
+      run: |
+        poetry run coverage erase
+        poetry run pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
+
+    - name: Verify coverage file
+      run: |
+        ls -la .coverage || echo "Coverage file not found!"
+        test -f .coverage || echo "Warning: Coverage file not found!"
+
+    - name: Upload coverage data
+      uses: actions/upload-artifact@v4
+      if: success() || failure()
+      with:
+        name: .coverage_${{ github.run_id }}
+        path: .coverage
+        retention-days: 1
+        if-no-files-found: ignore
+        include-hidden-files: true

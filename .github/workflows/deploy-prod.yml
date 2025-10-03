@@ -26,7 +26,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_ENV
 
       - name: Deploy to Production Server
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USERNAME }}
@@ -36,22 +36,11 @@ jobs:
           script: |
             cd ${{ secrets.PROD_APP_PATH }}
             git pull origin release/prod
-
-            export TELEGRAM_TOKEN="$TELEGRAM_TOKEN"
-            export WEATHER_TOKEN="$WEATHER_TOKEN"
-            export RELEASE_VERSION="${{ env.version }}"
-
-            # Строим и запускаем с переданными переменными
-            docker compose build --build-arg RELEASE_VERSION="$RELEASE_VERSION" backend
+            docker compose pull backend
             docker compose up -d
-        env:
-          WEATHER_TOKEN: ${{ secrets.WEATHER_TOKEN }}
-          RELEASE_VERSION: ${{ env.version }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          ADMIN_IDS: ${{ secrets.ADMIN_IDS }}
 
       - name: Notify Deployment Success
-        uses: appleboy/telegram-action@master
+        uses: appleboy/telegram-action@v1.0.1
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -59,7 +48,6 @@ jobs:
           message: |
             ✅ *Deployment Successful*
 
-            🏷️ *Version*: `v${{ env.version }}`
-            🎯 *Environment*: Production
-
-            🚀 Application has been deployed successfully!
+            *Version*: `v${{ env.version }}`
+            *Environment*: Production
+            Application has been deployed successfully!
