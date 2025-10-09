@@ -17,11 +17,9 @@ on:
       - '**/*.yaml'
   workflow_dispatch:
 
-
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: "${{ github.repository | downcase }}"
-
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-backend:
@@ -58,15 +56,17 @@ jobs:
 
       - name: Build & push backend image
         run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
             --target development_build \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/"${{ github.repository | downcase }}":ci-${{ github.sha }} \
+            -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
             --push \
             -f Dockerfile \
             .
+
           if [ -d /tmp/.buildx-cache-new ]; then
             rm -rf /tmp/.buildx-cache
             mv /tmp/.buildx-cache-new /tmp/.buildx-cache
@@ -99,8 +99,8 @@ jobs:
 
       - name: Pull backend image
         run: |
-          docker pull ghcr.io/"${{ github.repository | downcase }}":ci-${{ github.sha }}
-
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
 
       - name: Run tests (${{ matrix.shard }})
         env:
