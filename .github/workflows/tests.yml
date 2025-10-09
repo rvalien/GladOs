@@ -109,13 +109,17 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
 
+      - name: Debug - List files in container
+        run: |
+          docker compose --env-file .env run --rm backend ls -la tests/
+
       - name: Run tests
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
           docker compose --env-file .env run --rm \
             -e COVERAGE_FILE=/tmp/.coverage.all \
-            backend pytest .
+            backend pytest tests/
 
       - name: Collect coverage data
         run: |
