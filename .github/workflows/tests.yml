@@ -84,13 +84,10 @@ jobs:
       contents: read
       packages: read
     env:
-      COMPOSE_FILE: .docker-compose.yml
+      COMPOSE_FILE: docker-compose.yml
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - shard: all
-            pytest_args: "."
+
 
     steps:
       - name: Checkout repository
