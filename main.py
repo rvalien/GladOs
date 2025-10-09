@@ -32,7 +32,7 @@ dp.include_router(admin.admin_router)
 
 @dp.message(CommandStart())
 async def send_welcome(message: types.Message):
-    await message.reply(f"Hello, i'm ф GladOS. v{VERSION} beep boop...\n")
+    await message.reply(f"Hello, i'm GladOS. v{VERSION} beep boop...\n")
 
 
 async def main() -> None:

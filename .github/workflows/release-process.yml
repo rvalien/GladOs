@@ -67,4 +67,4 @@ jobs:
 
             ⏳ *Waiting for PR approval and merge*
 
-            [Review Pull Request](${{ github.server_url }}/${{ github.repository | downcase }}/pulls)
+            [Review Pull Request](${{ github.server_url }}/"${{ github.repository | downcase }}"/pulls)
