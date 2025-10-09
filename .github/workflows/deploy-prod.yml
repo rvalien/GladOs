@@ -32,6 +32,7 @@ jobs:
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
+          IMAGE=${{ github.repository }}
           EOF
 
       - name: Upload .env and docker-compose.yml to server
