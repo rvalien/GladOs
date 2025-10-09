@@ -46,6 +46,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare cache directory
+        run: mkdir -p /tmp/.buildx-cache
+
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -59,7 +62,6 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
-            --target development_build \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
             -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
@@ -81,14 +83,8 @@ jobs:
     permissions:
       contents: read
       packages: read
-    env:
-      COMPOSE_FILE: .docker-compose.yml
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - shard: all
-            pytest_args: "."
 
     steps:
       - name: Checkout repository
@@ -97,37 +93,52 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Create .env for tests
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          cat > .env << EOF
+          IMAGE=$REPO_NAME
+          RELEASE_VERSION=${{ env.version }}
+          TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
+          ADMIN_IDS=${{ secrets.ADMIN_IDS }}
+          EOF
+
       - name: Pull backend image
         run: |
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
 
-      - name: Run tests (${{ matrix.shard }})
+      - name: Debug - List files in container
+        run: |
+          docker compose --env-file .env run --rm backend ls -la tests/
+
+      - name: Run tests
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose run --rm \
-            -e COVERAGE_FILE=/tmp/.coverage.${{ matrix.shard }} \
-            backend pytest ${{ matrix.pytest_args }}
+          docker compose --env-file .env run --rm \
+            -e COVERAGE_FILE=/tmp/.coverage.all \
+            backend pytest tests/
 
-      - name: Collect coverage data (${{ matrix.shard }})
+      - name: Collect coverage data
         run: |
-          mkdir -p coverage-data/${{ matrix.shard }}
-          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/${{ matrix.shard }}/ \;
+          mkdir -p coverage-data/all
+          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/all/ \;
 
-      - name: Package coverage shard (${{ matrix.shard }})
+      - name: Package coverage
         run: |
-          touch coverage-data/${{ matrix.shard }}/.keep
-          tar -czf coverage_${{ matrix.shard }}.tar.gz -C coverage-data/${{ matrix.shard }} .
+          touch coverage-data/all/.keep
+          tar -czf coverage_all.tar.gz -C coverage-data/all .
 
       - name: Shutdown services
         if: always()
-        run: docker compose down --volumes
+        run: docker compose --env-file .env down --volumes
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage_${{ matrix.shard }}
-          path: coverage_${{ matrix.shard }}.tar.gz
+          name: coverage_all
+          path: coverage_all.tar.gz
           retention-days: 1
           include-hidden-files: true
