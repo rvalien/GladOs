@@ -34,16 +34,18 @@ jobs:
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
           EOF
 
-      - name: Upload .env file to server
+      - name: Upload .env and docker-compose.yml to server
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: ".env"
+          # Загружаем оба файла — .env и docker-compose.yml
+          source: ".env,docker-compose.yml"
           target: "${{ secrets.PROD_APP_PATH }}/"
-          rm: true
+          # Убираем rm: true — не нужно очищать папку!
+          # rm: true  ← УБРАТЬ ЭТУ СТРОКУ!
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.2.2
@@ -57,10 +59,9 @@ jobs:
             mkdir -p ${{ secrets.PROD_APP_PATH }}
             cd ${{ secrets.PROD_APP_PATH }}
 
-            # Проверяем наличие docker-compose.yml на сервере
+            # Проверяем наличие docker-compose.yml
             if [ ! -f "docker-compose.yml" ]; then
-              echo "docker-compose.yml not found on server!"
-              echo "You need to have docker-compose.yml file in ${{ secrets.PROD_APP_PATH }} on the server"
+              echo "❌ docker-compose.yml not found on server!"
               exit 1
             fi
 
@@ -68,11 +69,11 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Обновляем и запускаем docker compose
-            echo "Pulling latest images for version ${{ env.version }}..."
+            echo "🔄 Pulling latest images for version ${{ env.version }}..."
             docker compose --env-file .env pull backend
-            echo "Starting services..."
+            echo "🚀 Starting services..."
             docker compose --env-file .env up -d --remove-orphans
-            echo "Showing container status..."
+            echo "📊 Status:"
             docker compose ps
 
       - name: Notify Deployment Success
