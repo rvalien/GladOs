@@ -61,12 +61,11 @@ jobs:
           docker buildx build \
             --progress plain \
             --target development_build \
-            --build-arg DJANGO_ENV=development \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
             -t ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }} \
             --push \
-            -f docker/django/Dockerfile \
+            -f Dockerfile \
             .
           if [ -d /tmp/.buildx-cache-new ]; then
             rm -rf /tmp/.buildx-cache
@@ -83,7 +82,7 @@ jobs:
       contents: read
       packages: read
     env:
-      COMPOSE_FILE: .ci/docker-compose-tests.yml
+      COMPOSE_FILE: .docker-compose.yml
     strategy:
       fail-fast: false
       matrix:
@@ -101,18 +100,7 @@ jobs:
       - name: Pull backend image
         run: |
           docker pull ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }}
-          docker tag ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }} nt/insurance:dev
 
-      - name: Prepare coverage workspace
-        run: |
-          rm -f .coverage* coverage_*.tar.gz
-          rm -rf coverage-data
-          mkdir -p coverage
-          chmod 777 coverage
-
-
-      - name: Wait for database
-        run: docker compose run --rm backend
 
       - name: Run tests (${{ matrix.shard }})
         env:
