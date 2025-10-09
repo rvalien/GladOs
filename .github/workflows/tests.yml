@@ -100,9 +100,9 @@ jobs:
         run: |
           cat > .env << EOF
           IMAGE=${{ env.REPO_NAME }}
-          RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
+          IMAGE_TAG=ci-${{ github.sha }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
           EOF
 
