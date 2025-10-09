@@ -100,8 +100,8 @@ jobs:
 
       - name: Pull backend image
         run: |
-          docker pull ghcr.io/${{ github.repository }}:ci-${{ github.sha }}
-          docker tag ghcr.io/${{ github.repository }}:ci-${{ github.sha }} nt/insurance:dev
+          docker pull ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }}
+          docker tag ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }} nt/insurance:dev
 
       - name: Prepare coverage workspace
         run: |
