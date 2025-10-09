@@ -53,41 +53,27 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Проверяем, существует ли директория
-            if [ ! -d "${{ secrets.PROD_APP_PATH }}" ]; then
-              echo "Directory ${{ secrets.PROD_APP_PATH }} does not exist"
-              exit 1
-            fi
-
+            # Создаем директорию если не существует
+            mkdir -p ${{ secrets.PROD_APP_PATH }}
             cd ${{ secrets.PROD_APP_PATH }}
 
-            # Проверяем, является ли директория git репозиторием
-            if [ ! -d .git ]; then
-              echo "Directory ${{ secrets.PROD_APP_PATH }} is not a git repository"
-              # Клонируем репозиторий или инициализируем его
-              git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git . || {
-                echo "Failed to clone repository"
-                exit 1
-              }
-            else
-              # Если это git репозиторий, обновляем его
-              git fetch origin
-              git reset --hard origin/release/prod
-            fi
-
-            # Убедимся, что мы на нужной ветке
-            git checkout release/prod
-            git pull origin release/prod
-
-            # Проверяем наличие docker-compose.yml
+            # Проверяем наличие docker-compose.yml на сервере
             if [ ! -f "docker-compose.yml" ]; then
-              echo "docker-compose.yml not found in ${{ secrets.PROD_APP_PATH }}"
+              echo "docker-compose.yml not found on server!"
+              echo "You need to have docker-compose.yml file in ${{ secrets.PROD_APP_PATH }} on the server"
               exit 1
             fi
 
+            # Логинимся в GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
             # Обновляем и запускаем docker compose
+            echo "Pulling latest images for version ${{ env.version }}..."
             docker compose --env-file .env pull backend
+            echo "Starting services..."
             docker compose --env-file .env up -d --remove-orphans
+            echo "Showing container status..."
+            docker compose ps
 
       - name: Notify Deployment Success
         uses: appleboy/telegram-action@v1.0.1
