@@ -90,6 +90,3 @@ jobs:
             *Version*: `v${{ env.version }}`
             *Environment*: Production
             Application has been deployed successfully!
-
-# ghcr.io/rvalien/glados:latest
-# ghcr.io/rvalien/GladOs:latest
