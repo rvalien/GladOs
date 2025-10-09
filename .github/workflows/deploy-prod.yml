@@ -32,6 +32,7 @@ jobs:
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
+          IMAGE=${{ github.repository }}
           EOF
 
       - name: Upload .env and docker-compose.yml to server
@@ -41,11 +42,10 @@ jobs:
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          # Загружаем оба файла — .env и docker-compose.yml
+
           source: ".env,docker-compose.yml"
           target: "${{ secrets.PROD_APP_PATH }}/"
-          # Убираем rm: true — не нужно очищать папку!
-          # rm: true  ← УБРАТЬ ЭТУ СТРОКУ!
+
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.2.2
