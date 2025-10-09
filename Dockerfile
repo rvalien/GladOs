@@ -28,7 +28,6 @@ WORKDIR /app
 # Копируем установленные пакеты и код
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-ARG CACHE_BUST=1
 COPY . .
 
 # Создаем пользователя для безопасности
