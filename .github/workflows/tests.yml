@@ -19,8 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  REPO_NAME: $(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
 
 jobs:
   build-backend:
@@ -32,6 +30,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Map source paths for coverage
         run: |
@@ -47,9 +49,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Prepare cache directory
-        run: mkdir -p /tmp/.buildx-cache
-
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -64,7 +63,7 @@ jobs:
             --progress plain \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
+            -t ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }} \
             --push \
             -f Dockerfile \
             .
@@ -90,13 +89,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Login to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Create .env for tests
         run: |
           cat > .env << EOF
-          IMAGE=$REPO_NAME
+          IMAGE=${{ env.REPO_NAME }}
           RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
@@ -105,11 +108,11 @@ jobs:
 
       - name: Pull backend image
         run: |
-          docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
+            docker pull ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }}
 
       - name: Check files in image
         run: |
-          docker run --rm ghcr.io/"$REPO_NAME":ci-${{ github.sha }} ls -la tests/
+          docker run --rm ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }} ls -la tests/
 
       - name: Debug - List files in container
         run: |
