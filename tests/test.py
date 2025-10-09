@@ -14,3 +14,7 @@ def test_nor_ok():
     result = divide(10 / 0)
 
     assert result == 2
+
+
+def test_ok_2():
+    assert True is True
