@@ -17,49 +17,129 @@ on:
       - '**/*.yaml'
   workflow_dispatch:
 
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+
 jobs:
-  test:
+  build-backend:
+    name: build backend image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Map source paths for coverage
+        run: |
+          sudo rm -rf /home/app
+          sudo ln -s "$GITHUB_WORKSPACE" /home/app
+
+      - name: Fix Docker Hub Issue
+        run: docker logout
+
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build & push backend image
+        run: |
+          docker buildx build \
+            --progress plain \
+            --target development_build \
+            --build-arg DJANGO_ENV=development \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            -t ghcr.io/${{ github.repository }}:ci-${{ github.sha }} \
+            --push \
+            -f docker/django/Dockerfile \
+            .
+          if [ -d /tmp/.buildx-cache-new ]; then
+            rm -rf /tmp/.buildx-cache
+            mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          fi
+
+  tests:
+    name: tests
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    environment: ci-tests
+    needs: build-backend
+    permissions:
+      contents: read
+      packages: read
+    env:
+      COMPOSE_FILE: .ci/docker-compose-tests.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: all
+            pytest_args: "."
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.13'
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-    - name: Setup Poetry
-      uses: abatilo/actions-poetry@v4
-      with:
-        poetry-version: '2.2'
+      - name: Pull backend image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}:ci-${{ github.sha }}
+          docker tag ghcr.io/${{ github.repository }}:ci-${{ github.sha }} nt/insurance:dev
 
-    - name: Setup Python dependencies for coverage
-      run: |
-        pip install coverage[toml] pytest pytest-cov
+      - name: Prepare coverage workspace
+        run: |
+          rm -f .coverage* coverage_*.tar.gz
+          rm -rf coverage-data
+          mkdir -p coverage
+          chmod 777 coverage
 
-    - name: Install project dependencies
-      run: |
-        poetry install --only main
-      working-directory: ${{ github.workspace }}
 
-    - name: Run tests with coverage
-      run: |
-        poetry run coverage erase
-        poetry run pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
+      - name: Wait for database
+        run: docker compose run --rm backend
 
-    - name: Verify coverage file
-      run: |
-        ls -la .coverage || echo "Coverage file not found!"
-        test -f .coverage || echo "Warning: Coverage file not found!"
+      - name: Run tests (${{ matrix.shard }})
+        env:
+          CELERY_TASK_ALWAYS_EAGER: "true"
+        run: |
+          docker compose run --rm \
+            -e COVERAGE_FILE=/tmp/.coverage.${{ matrix.shard }} \
+            backend pytest ${{ matrix.pytest_args }}
 
-    - name: Upload coverage data
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: .coverage_${{ github.run_id }}
-        path: .coverage
-        retention-days: 1
-        if-no-files-found: ignore
-        include-hidden-files: true
+      - name: Collect coverage data (${{ matrix.shard }})
+        run: |
+          mkdir -p coverage-data/${{ matrix.shard }}
+          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/${{ matrix.shard }}/ \;
+
+      - name: Package coverage shard (${{ matrix.shard }})
+        run: |
+          touch coverage-data/${{ matrix.shard }}/.keep
+          tar -czf coverage_${{ matrix.shard }}.tar.gz -C coverage-data/${{ matrix.shard }} .
+
+      - name: Shutdown services
+        if: always()
+        run: docker compose down --volumes
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_${{ matrix.shard }}
+          path: coverage_${{ matrix.shard }}.tar.gz
+          retention-days: 1
+          include-hidden-files: true
