@@ -27,12 +27,14 @@ jobs:
 
       - name: Create .env file locally
         run: |
+          LOWERCASE_REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
           cat > .env << EOF
           RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
-          IMAGE=${{ github.repository }}
+          IMAGE=$LOWERCASE_REPO_NAME
           EOF
 
       - name: Upload .env and docker-compose.yml to server
