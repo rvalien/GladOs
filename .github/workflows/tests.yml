@@ -20,6 +20,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  REPO_NAME: $(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
 
 jobs:
   build-backend:
@@ -59,7 +60,6 @@ jobs:
 
       - name: Build & push backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
             --cache-from type=local,src=/tmp/.buildx-cache \
@@ -95,7 +95,6 @@ jobs:
 
       - name: Create .env for tests
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           cat > .env << EOF
           IMAGE=$REPO_NAME
           RELEASE_VERSION=${{ env.version }}
@@ -106,8 +105,11 @@ jobs:
 
       - name: Pull backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
+
+      - name: Check files in image
+        run: |
+          docker run --rm ghcr.io/"$REPO_NAME":ci-${{ github.sha }} ls -la tests/
 
       - name: Debug - List files in container
         run: |
