@@ -46,6 +46,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare cache directory
+        run: mkdir -p /tmp/.buildx-cache
+
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -59,7 +62,6 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
-            --target development_build \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
             -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
