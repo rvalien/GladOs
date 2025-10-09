@@ -20,7 +20,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository | downcase }}
 
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
             --build-arg DJANGO_ENV=development \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/${{ github.repository }}:ci-${{ github.sha }} \
+            -t ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }} \
             --push \
             -f docker/django/Dockerfile \
             .

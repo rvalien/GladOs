@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/${{ github.repository }}:${RELEASE_VERSION:-latest}
+    image: ghcr.io/${{ github.repository | downcase }}:${RELEASE_VERSION:-latest}
     container_name: glados-backend
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
