@@ -20,7 +20,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository | downcase }}
+  IMAGE_NAME: "${{ github.repository | downcase }}"
 
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
             --target development_build \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }} \
+            -t ghcr.io/"${{ github.repository | downcase }}":ci-${{ github.sha }} \
             --push \
             -f Dockerfile \
             .
@@ -99,7 +99,7 @@ jobs:
 
       - name: Pull backend image
         run: |
-          docker pull ghcr.io/${{ github.repository | downcase }}:ci-${{ github.sha }}
+          docker pull ghcr.io/"${{ github.repository | downcase }}":ci-${{ github.sha }}
 
 
       - name: Run tests (${{ matrix.shard }})
