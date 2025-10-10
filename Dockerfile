@@ -1,6 +1,5 @@
 # Этап сборки
 FROM python:3.13-slim AS builder
-ARG BUILD_DATE=now
 
 ARG RELEASE_VERSION=latest
 ENV VERSION=${RELEASE_VERSION}
@@ -32,7 +31,13 @@ COPY . .
 
 # Создаем пользователя для безопасности
 RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
+
+# Создаем директории для coverage и даем права appuser
+RUN mkdir -p /app/coverage && \
+    mkdir -p /tmp && \
+    chmod 777 /tmp && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
 # Запускаем бота
