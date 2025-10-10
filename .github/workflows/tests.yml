@@ -114,14 +114,36 @@ jobs:
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose --env-file .env run --rm \
-            -v $PWD:/coverage_output \
-            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/"
+          mkdir -p coverage_output
+          chmod 777 coverage_output
+          docker compose --env-file .env run --rm --user root \
+            -v $PWD/coverage_output:/coverage_output \
+            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/ && chmod 644 /coverage_output/coverage.xml"
 
-      - name: Coverage comment
+      - name: Move coverage file
+        if: always()
+        run: |
+          if [ -f coverage_output/coverage.xml ]; then
+            mv coverage_output/coverage.xml ./coverage.xml
+          fi
+
+      - name: Code Coverage Report
         if: github.event_name == 'pull_request'
-        uses: py-cov-action/python-coverage-comment-action@v3
+        uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          GITHUB_TOKEN: ${{ github.token }}
-          MINIMUM_GREEN: 80
-          MINIMUM_ORANGE: 60
+          filename: coverage.xml
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: '60 80'
+
+      - name: Add Coverage PR Comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: code-coverage-results.md
