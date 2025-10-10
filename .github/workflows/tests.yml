@@ -82,6 +82,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -113,4 +114,14 @@ jobs:
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose --env-file .env run --rm backend pytest tests/
+          docker compose --env-file .env run --rm \
+            -v $PWD:/coverage_output \
+            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/"
+
+      - name: Coverage comment
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
