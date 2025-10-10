@@ -18,12 +18,16 @@ jobs:
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
             VERSION="${BASH_REMATCH[1]}"
+            IMAGE_TAG="v${VERSION}"
             echo "Найдена версия в commit: $VERSION"
+            echo "Используется образ: $IMAGE_TAG"
           else
             VERSION="latest"
+            IMAGE_TAG="latest"
             echo "Используется latest"
           fi
           echo "version=$VERSION" >> $GITHUB_ENV
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Create .env file locally
         run: |
@@ -35,7 +39,12 @@ jobs:
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
           IMAGE=$LOWERCASE_REPO_NAME
+          IMAGE_TAG=${{ env.image_tag }}
           EOF
+
+          echo "📦 Deploying with:"
+          echo "  Version: ${{ env.version }}"
+          echo "  Image tag: ${{ env.image_tag }}"
 
       - name: Upload .env and docker-compose.yml to server
         uses: appleboy/scp-action@v1
@@ -44,10 +53,8 @@ jobs:
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-
           source: ".env,docker-compose.yml"
           target: "${{ secrets.PROD_APP_PATH }}/"
-
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.2.2
@@ -71,12 +78,21 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Обновляем и запускаем docker compose
-            echo "🔄 Pulling latest images for version ${{ env.version }}..."
+            echo "🔄 Pulling image with tag: ${{ env.image_tag }}..."
             docker compose --env-file .env pull backend
+
             echo "🚀 Starting services..."
             docker compose --env-file .env up -d --remove-orphans
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+
             echo "📊 Status:"
             docker compose ps
+
+            echo "✅ Deployed successfully!"
+            echo "   Version: ${{ env.version }}"
+            echo "   Image: ${{ env.image_tag }}"
 
       - name: Notify Deployment Success
         uses: appleboy/telegram-action@v1.0.1
@@ -88,5 +104,7 @@ jobs:
             ✅ *Deployment Successful*
 
             *Version*: `v${{ env.version }}`
+            *Image Tag*: `${{ env.image_tag }}`
             *Environment*: Production
+
             Application has been deployed successfully!
