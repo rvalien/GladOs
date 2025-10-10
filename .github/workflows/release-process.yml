@@ -18,9 +18,36 @@ jobs:
   release_process:
     environment: cd-prod
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.source_branch }}
+
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Tag Docker image with version
+        run: |
+          # Проверяем наличие latest образа
+          if ! docker pull ghcr.io/"${{ env.REPO_NAME }}":latest; then
+            echo "❌ Latest image not found! Please ensure tests passed on master branch."
+            exit 1
+          fi
+
+          # Тегируем образ версией релиза
+          docker tag ghcr.io/"${{ env.REPO_NAME }}":latest ghcr.io/"${{ env.REPO_NAME }}":v${{ github.event.inputs.version }}
+          docker push ghcr.io/"${{ env.REPO_NAME }}":v${{ github.event.inputs.version }}
+
+          echo "✅ Docker image tagged as v${{ github.event.inputs.version }}"
 
       - name: Create Release Tag
         run: |
@@ -41,6 +68,11 @@ jobs:
             - Version: v${{ github.event.inputs.version }}
             - Source: ${{ github.event.inputs.source_branch }}
             - Target: ${{ github.event.inputs.target_branch }}
+            - Docker image: \`ghcr.io/${{ env.REPO_NAME }}:v${{ github.event.inputs.version }}\`
+
+            **Changes:**
+            - Docker image tagged as v${{ github.event.inputs.version }}
+            - Git tag v${{ github.event.inputs.version }} created
 
             Пожалуйста:
             1. Проверьте изменения
@@ -50,7 +82,6 @@ jobs:
             **⚠️После слияния, автоматически запустится деплой версии v${{ github.event.inputs.version }} в прод**"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
       - name: Notify Release Created
         uses: appleboy/telegram-action@master
@@ -64,6 +95,7 @@ jobs:
             🏷️ *Version*: `v${{ github.event.inputs.version }}`
             🌿 *Source*: `${{ github.event.inputs.source_branch }}`
             🎯 *Target*: `${{ github.event.inputs.target_branch }}`
+            🐳 *Docker*: `ghcr.io/${{ env.REPO_NAME }}:v${{ github.event.inputs.version }}`
 
             ⏳ *Waiting for PR approval and merge*
 
