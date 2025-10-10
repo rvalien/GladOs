@@ -24,7 +24,7 @@ async def admin_help(message: Message):
         return
 
     help_text = """
-🤖 <b>Админские команды:</b>
+🤖 <b>admin команды:</b>
 
 /get_channel_id - Получить ID канала
 /get_chat_id - Получить ID текущего чата
