@@ -123,22 +123,25 @@ jobs:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
           docker compose --env-file .env run --rm \
-            -e COVERAGE_FILE=/tmp/.coverage.all \
+            -e COVERAGE_FILE=/app/coverage/.coverage.all \
             backend pytest tests/
 
       - name: Collect coverage data
         run: |
           mkdir -p coverage-data/all
-          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/all/ \;
+          # Проверяем, есть ли файлы в директории coverage
+          if [ -d "coverage" ]; then
+            find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/all/ \;
+          else
+            echo "Coverage directory not found"
+            ls -la
+          fi
+
 
       - name: Package coverage
         run: |
           touch coverage-data/all/.keep
           tar -czf coverage_all.tar.gz -C coverage-data/all .
-
-      - name: Shutdown services
-        if: always()
-        run: docker compose --env-file .env down --volumes
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
