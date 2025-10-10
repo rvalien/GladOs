@@ -31,13 +31,6 @@ COPY . .
 
 # Создаем пользователя для безопасности
 RUN adduser --disabled-password --gecos '' appuser
-
-# Создаем директории для coverage и даем права appuser
-RUN mkdir -p /app/coverage && \
-    mkdir -p /tmp && \
-    chmod 777 /tmp && \
-    chown -R appuser:appuser /app
-
 USER appuser
 
 # Запускаем бота

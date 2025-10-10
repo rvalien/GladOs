@@ -113,45 +113,4 @@ jobs:
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose --env-file .env run --rm \
-            -v ${{ github.workspace }}/app-coverage:/app/coverage \
-            -e COVERAGE_FILE=/app/coverage/.coverage.all \
-            backend pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml:/app/coverage/coverage.xml
-
-      - name: Debug - Check coverage files
-        run: |
-          echo "Checking coverage files in app-coverage:"
-          ls -la app-coverage/ || echo "app-coverage directory doesn't exist"
-          find app-coverage -type f
-
-      - name: Collect coverage data
-        run: |
-          mkdir -p coverage-data/all
-          # Проверяем, есть ли файлы в /app-coverage
-          if [ -f "app-coverage/.coverage.all" ]; then
-            cp app-coverage/.coverage.all coverage-data/all/
-            echo "Coverage file found and copied"
-          elif [ -f "app-coverage/coverage.xml" ]; then
-            cp app-coverage/coverage.xml coverage-data/all/
-            echo "Coverage XML file found and copied"
-          else
-            echo "Coverage files not found"
-            ls -la app-coverage/ || echo "app-coverage directory doesn't exist"
-          fi
-
-      - name: Package coverage
-        run: |
-          touch coverage-data/all/.keep
-          tar -czf coverage_all.tar.gz -C coverage-data/all .
-
-      - name: Shutdown services
-        if: always()
-        run: docker compose --env-file .env down --volumes
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_all
-          path: coverage_all.tar.gz
-          retention-days: 1
-          include-hidden-files: true
+          docker compose --env-file .env run --rm backend pytest tests/
