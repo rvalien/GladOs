@@ -114,9 +114,18 @@ jobs:
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose --env-file .env run --rm \
-            -v $PWD:/coverage_output \
-            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/"
+          mkdir -p coverage_output
+          chmod 777 coverage_output
+          docker compose --env-file .env run --rm --user root \
+            -v $PWD/coverage_output:/coverage_output \
+            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/ && chmod 644 /coverage_output/coverage.xml"
+
+      - name: Move coverage file
+        if: always()
+        run: |
+          if [ -f coverage_output/coverage.xml ]; then
+            mv coverage_output/coverage.xml ./coverage.xml
+          fi
 
       - name: Coverage comment
         if: github.event_name == 'pull_request'
