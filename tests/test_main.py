@@ -18,3 +18,7 @@ def test_nor_ok():
 
 def test_ok_2():
     assert True is True
+
+
+def test_ok_3():
+    assert "" == ""

@@ -19,7 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-backend:
@@ -31,6 +30,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Map source paths for coverage
         run: |
@@ -46,9 +49,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Prepare cache directory
-        run: mkdir -p /tmp/.buildx-cache
-
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
@@ -59,12 +59,11 @@ jobs:
 
       - name: Build & push backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
+            -t ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }} \
             --push \
             -f Dockerfile \
             .
@@ -83,21 +82,23 @@ jobs:
     permissions:
       contents: read
       packages: read
-    strategy:
-      fail-fast: false
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Login to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Create .env for tests
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           cat > .env << EOF
-          IMAGE=$REPO_NAME
+          IMAGE=${{ env.REPO_NAME }}
+          IMAGE_TAG=ci-${{ github.sha }}
           RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
@@ -106,39 +107,10 @@ jobs:
 
       - name: Pull backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
+          docker pull ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }}
 
-      - name: Debug - List files in container
-        run: |
-          docker compose --env-file .env run --rm backend ls -la tests/
-
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose --env-file .env run --rm \
-            -e COVERAGE_FILE=/tmp/.coverage.all \
-            backend pytest tests/
-
-      - name: Collect coverage data
-        run: |
-          mkdir -p coverage-data/all
-          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/all/ \;
-
-      - name: Package coverage
-        run: |
-          touch coverage-data/all/.keep
-          tar -czf coverage_all.tar.gz -C coverage-data/all .
-
-      - name: Shutdown services
-        if: always()
-        run: docker compose --env-file .env down --volumes
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_all
-          path: coverage_all.tar.gz
-          retention-days: 1
-          include-hidden-files: true
+          docker compose --env-file .env run --rm backend pytest tests/
