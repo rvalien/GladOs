@@ -114,29 +114,29 @@ jobs:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
           docker compose --env-file .env run --rm \
-            -v ${{ github.workspace }}/tmp-coverage:/tmp \
-            -e COVERAGE_FILE=/tmp/.coverage.all \
-            backend pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml:/tmp/coverage.xml
+            -v ${{ github.workspace }}/app-coverage:/app/coverage \
+            -e COVERAGE_FILE=/app/coverage/.coverage.all \
+            backend pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml:/app/coverage/coverage.xml
 
       - name: Debug - Check coverage files
         run: |
-          echo "Checking coverage files in tmp-coverage:"
-          ls -la tmp-coverage/ || echo "tmp-coverage directory doesn't exist"
-          find tmp-coverage -type f
+          echo "Checking coverage files in app-coverage:"
+          ls -la app-coverage/ || echo "app-coverage directory doesn't exist"
+          find app-coverage -type f
 
       - name: Collect coverage data
         run: |
           mkdir -p coverage-data/all
-          # Проверяем, есть ли файлы в /tmp-coverage
-          if [ -f "tmp-coverage/.coverage.all" ]; then
-            cp tmp-coverage/.coverage.all coverage-data/all/
+          # Проверяем, есть ли файлы в /app-coverage
+          if [ -f "app-coverage/.coverage.all" ]; then
+            cp app-coverage/.coverage.all coverage-data/all/
             echo "Coverage file found and copied"
-          elif [ -f "tmp-coverage/coverage.xml" ]; then
-            cp tmp-coverage/coverage.xml coverage-data/all/
+          elif [ -f "app-coverage/coverage.xml" ]; then
+            cp app-coverage/coverage.xml coverage-data/all/
             echo "Coverage XML file found and copied"
           else
             echo "Coverage files not found"
-            ls -la tmp-coverage/ || echo "tmp-coverage directory doesn't exist"
+            ls -la app-coverage/ || echo "app-coverage directory doesn't exist"
           fi
 
       - name: Package coverage
