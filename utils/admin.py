@@ -37,7 +37,7 @@ async def admin_help(message: Message):
 async def get_channel_id(message: Message, command: CommandObject):
     """Получение ID канала по username"""
     if not is_admin(message.from_user.id):
-        await message.answer("❌ У вас нет прав для использования этой команды eeee")
+        await message.answer("❌ У вас нет прав для использования этой команды")
         return
 
     if not command.args:
