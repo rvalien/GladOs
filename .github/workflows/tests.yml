@@ -82,8 +82,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    strategy:
-      fail-fast: false
 
     steps:
       - name: Checkout repository
@@ -100,32 +98,31 @@ jobs:
         run: |
           cat > .env << EOF
           IMAGE=${{ env.REPO_NAME }}
+          IMAGE_TAG=ci-${{ github.sha }}
+          RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
-          IMAGE_TAG=ci-${{ github.sha }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
           EOF
 
       - name: Pull backend image
         run: |
-            docker pull ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }}
+          docker pull ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }}
 
-      - name: Check files in image
-        run: |
-          docker run --rm ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }} ls -la tests/
-
-      - name: Debug - List files in container
-        run: |
-          docker compose --env-file .env run --rm backend ls -la tests/
-
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
           docker compose --env-file .env run --rm \
             -v ${{ github.workspace }}/tmp-coverage:/tmp \
             -e COVERAGE_FILE=/tmp/.coverage.all \
-            backend pytest tests/
+            backend pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml:/tmp/coverage.xml
+
+      - name: Debug - Check coverage files
+        run: |
+          echo "Checking coverage files in tmp-coverage:"
+          ls -la tmp-coverage/ || echo "tmp-coverage directory doesn't exist"
+          find tmp-coverage -type f
 
       - name: Collect coverage data
         run: |
@@ -134,10 +131,12 @@ jobs:
           if [ -f "tmp-coverage/.coverage.all" ]; then
             cp tmp-coverage/.coverage.all coverage-data/all/
             echo "Coverage file found and copied"
+          elif [ -f "tmp-coverage/coverage.xml" ]; then
+            cp tmp-coverage/coverage.xml coverage-data/all/
+            echo "Coverage XML file found and copied"
           else
-            echo "Coverage file not found"
+            echo "Coverage files not found"
             ls -la tmp-coverage/ || echo "tmp-coverage directory doesn't exist"
-            ls -la
           fi
 
       - name: Package coverage
