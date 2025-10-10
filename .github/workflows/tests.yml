@@ -19,7 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-backend:
@@ -31,6 +30,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Map source paths for coverage
         run: |
@@ -56,13 +59,11 @@ jobs:
 
       - name: Build & push backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
             --progress plain \
-            --target development_build \
             --cache-from type=local,src=/tmp/.buildx-cache \
             --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            -t ghcr.io/"$REPO_NAME":ci-${{ github.sha }} \
+            -t ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }} \
             --push \
             -f Dockerfile \
             .
@@ -81,53 +82,68 @@ jobs:
     permissions:
       contents: read
       packages: read
-    env:
-      COMPOSE_FILE: .docker-compose.yml
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - shard: all
-            pytest_args: "."
+      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Set REPO_NAME in lowercase
+        run: |
+          echo "REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Login to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Create .env for tests
+        run: |
+          cat > .env << EOF
+          IMAGE=${{ env.REPO_NAME }}
+          IMAGE_TAG=ci-${{ github.sha }}
+          RELEASE_VERSION=${{ env.version }}
+          TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
+          ADMIN_IDS=${{ secrets.ADMIN_IDS }}
+          EOF
+
       - name: Pull backend image
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker pull ghcr.io/"$REPO_NAME":ci-${{ github.sha }}
+          docker pull ghcr.io/"${{ env.REPO_NAME }}":ci-${{ github.sha }}
 
-      - name: Run tests (${{ matrix.shard }})
+      - name: Run tests with coverage
         env:
           CELERY_TASK_ALWAYS_EAGER: "true"
         run: |
-          docker compose run --rm \
-            -e COVERAGE_FILE=/tmp/.coverage.${{ matrix.shard }} \
-            backend pytest ${{ matrix.pytest_args }}
+          mkdir -p coverage_output
+          chmod 777 coverage_output
+          docker compose --env-file .env run --rm --user root \
+            -v $PWD/coverage_output:/coverage_output \
+            backend bash -c "pytest tests/ --cov --cov-report=xml --cov-report=term && cp coverage.xml /coverage_output/ && chmod 644 /coverage_output/coverage.xml"
 
-      - name: Collect coverage data (${{ matrix.shard }})
-        run: |
-          mkdir -p coverage-data/${{ matrix.shard }}
-          find coverage -maxdepth 1 -name ".coverage*" -exec cp {} coverage-data/${{ matrix.shard }}/ \;
-
-      - name: Package coverage shard (${{ matrix.shard }})
-        run: |
-          touch coverage-data/${{ matrix.shard }}/.keep
-          tar -czf coverage_${{ matrix.shard }}.tar.gz -C coverage-data/${{ matrix.shard }} .
-
-      - name: Shutdown services
+      - name: Move coverage file
         if: always()
-        run: docker compose down --volumes
+        run: |
+          if [ -f coverage_output/coverage.xml ]; then
+            mv coverage_output/coverage.xml ./coverage.xml
+          fi
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+      - name: Code Coverage Report
+        if: github.event_name == 'pull_request'
+        uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          name: coverage_${{ matrix.shard }}
-          path: coverage_${{ matrix.shard }}.tar.gz
-          retention-days: 1
-          include-hidden-files: true
+          filename: coverage.xml
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: '60 80'
+
+      - name: Add Coverage PR Comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: code-coverage-results.md

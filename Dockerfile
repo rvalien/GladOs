@@ -31,7 +31,6 @@ COPY . .
 
 # Создаем пользователя для безопасности
 RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
 USER appuser
 
 # Запускаем бота
