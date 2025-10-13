@@ -1,8 +1,8 @@
 # Этап сборки
 FROM python:3.13-slim AS builder
 
-ARG RELEASE_VERSION=latest
-ENV VERSION=${RELEASE_VERSION}
+ARG IMAGE_TAG=latest
+ENV VERSION=${IMAGE_TAG}
 
 LABEL version=$VERSION
 LABEL description="image with GladOs $VERSION"
