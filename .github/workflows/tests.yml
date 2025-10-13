@@ -8,6 +8,9 @@ on:
       - '**/*.md'
       - '**/*.yml'
       - '**/*.yaml'
+      - 'poetry.lock'
+      - 'pyproject.toml'
+      - 'LICENSE'
   push:
     branches:
       - master
@@ -15,6 +18,9 @@ on:
       - '**/*.md'
       - '**/*.yml'
       - '**/*.yaml'
+      - 'poetry.lock'
+      - 'pyproject.toml'
+      - 'LICENSE'
   workflow_dispatch:
 
 env:
@@ -100,7 +106,6 @@ jobs:
           cat > .env << EOF
           IMAGE=${{ env.REPO_NAME }}
           IMAGE_TAG=ci-${{ github.sha }}
-          RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}

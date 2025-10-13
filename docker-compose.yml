@@ -4,6 +4,6 @@ services:
     container_name: glados-backend
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - RELEASE_VERSION=${RELEASE_VERSION}
+      - RELEASE_VERSION=${IMAGE_TAG}
       - WEATHER_TOKEN=${WEATHER_TOKEN}
       - ADMIN_IDS=${ADMIN_IDS}

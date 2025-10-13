@@ -17,16 +17,12 @@ jobs:
         run: |
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MSG" =~ \[RELEASE-v([0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-            IMAGE_TAG="v${VERSION}"
-            echo "Найдена версия в commit: $VERSION"
-            echo "Используется образ: $IMAGE_TAG"
+            IMAGE_TAG="${BASH_REMATCH[1]}"
+            echo "Найдена версия в commit: $IMAGE_TAG"
           else
-            VERSION="latest"
             IMAGE_TAG="latest"
             echo "Используется latest"
           fi
-          echo "version=$VERSION" >> $GITHUB_ENV
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Create .env file locally
@@ -34,7 +30,6 @@ jobs:
           LOWERCASE_REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
 
           cat > .env << EOF
-          RELEASE_VERSION=${{ env.version }}
           TELEGRAM_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEATHER_TOKEN=${{ secrets.WEATHER_TOKEN }}
           ADMIN_IDS=${{ secrets.ADMIN_IDS }}
@@ -43,7 +38,6 @@ jobs:
           EOF
 
           echo "📦 Deploying with:"
-          echo "  Version: ${{ env.version }}"
           echo "  Image tag: ${{ env.image_tag }}"
 
       - name: Upload .env and docker-compose.yml to server
@@ -91,7 +85,6 @@ jobs:
             docker compose ps
 
             echo "✅ Deployed successfully!"
-            echo "   Version: ${{ env.version }}"
             echo "   Image: ${{ env.image_tag }}"
 
       - name: Notify Deployment Success
@@ -103,7 +96,6 @@ jobs:
           message: |
             ✅ *Deployment Successful*
 
-            *Version*: `v${{ env.version }}`
             *Image Tag*: `${{ env.image_tag }}`
             *Environment*: Production
 
