@@ -11,6 +11,8 @@ python = "^3.13"
 aiogram = "^3.22.0"
 pytest = "^8.4.2"
 pytest-cov = "^7.0.0"
+pytest-asyncio = "^1.2.0"
+pytest-mock = "^3.15.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.3.0"
@@ -18,9 +20,46 @@ ruff = "^0.13.0"
 
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 minversion = "6.0"
-addopts = "-ra -q"
-testpaths = [
-    "tests",
-    "tests/test.py"
+addopts = [
+    "-ra",
+    "-q",
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+markers = [
+    "asyncio: mark test as async",
+    "unit: mark test as unit test",
+    "integration: mark test as integration test",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "venv/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
 ]
