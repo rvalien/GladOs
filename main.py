@@ -7,11 +7,15 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command, CommandStart
+from dotenv import load_dotenv
+from utils import admin, coinflip, weather
 
-from utils import weather, admin
+load_dotenv()
 
 VERSION = os.environ["RELEASE_VERSION"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
+WEATHER_TOKEN = os.environ["WEATHER_TOKEN"]
+
 
 router = Router()
 
@@ -28,6 +32,7 @@ dp.include_router(router)
 dp.include_router(admin.help_router)
 dp.include_router(weather.router)
 dp.include_router(admin.admin_router)
+dp.include_router(coinflip.router)
 
 
 @dp.message(CommandStart())
