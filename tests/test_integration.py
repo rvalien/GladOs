@@ -17,11 +17,10 @@ def setup_env():
     }
 
     # Очищаем импортированные модули ПЕРЕД установкой новых env
-    modules_to_reload = ["utils.admin", "utils.weather", "main", "utils.coinflip"]
+    modules_to_reload = ["utils.admin", "utils.weather", "main"]
     for mod in modules_to_reload:
         if mod in sys.modules:
             del sys.modules[mod]
-
     with patch.dict(os.environ, env_vars, clear=False):
         yield
 
