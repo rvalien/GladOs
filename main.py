@@ -12,7 +12,7 @@ from utils import weather, admin
 
 VERSION = os.environ["RELEASE_VERSION"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-
+WEATHER_TOKEN = os.environ["WEATHER_TOKEN"]
 router = Router()
 
 
