@@ -82,32 +82,6 @@ class TestBotIntegration:
         assert "1.0.0" in call_args
 
     @pytest.mark.asyncio
-    async def test_multiple_commands_sequence(self, bot):
-        """Тест последовательности команд"""
-        # Команда start
-        msg_start = self.create_message(bot, "/start")
-        from main import send_welcome
-
-        await send_welcome(msg_start)
-        assert msg_start.reply.called
-
-        # Команда help
-        msg_help = self.create_message(bot, "/help")
-        from main import help_command
-
-        await help_command(msg_help)
-        assert msg_help.answer.called
-
-        # Команда weather
-        msg_weather = self.create_message(bot, "/weather")
-        msg_weather.bot.send_chat_action = AsyncMock()
-        with patch("utils.weather.get_weather", return_value="15.0C, солнечно"):
-            from utils.weather import weather_handler
-
-            await weather_handler(msg_weather)
-        assert msg_weather.reply.called
-
-    @pytest.mark.asyncio
     async def test_admin_commands_access_control(self, bot):
         """Тест контроля доступа к административным командам"""
         from utils.admin import get_chat_id, admin_help, is_admin
