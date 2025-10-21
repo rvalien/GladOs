@@ -21,7 +21,6 @@ def setup_env():
     for mod in modules_to_reload:
         if mod in sys.modules:
             del sys.modules[mod]
-
     with patch.dict(os.environ, env_vars, clear=False):
         yield
 
