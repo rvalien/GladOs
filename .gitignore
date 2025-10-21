@@ -1,0 +1,23 @@
+.env
+
+# IDE
+.idea/
+.zed/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+.coverage.xml
+coverage.xml
